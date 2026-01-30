@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Professional Web Developer Services | Portfolio</title>
     <meta name="description" content="Expert freelance web developer offering affordable, high-quality websites for businesses, doctors, and startups." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -29,7 +30,6 @@
     <style>
       body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
       .scroll-smooth { scroll-behavior: smooth; }
-      /* Hide scrollbar for Chrome, Safari and Opera */
       ::-webkit-scrollbar { width: 8px; }
       ::-webkit-scrollbar-track { background: #f1f1f1; }
       ::-webkit-scrollbar-thumb { background: #2563EB; border-radius: 10px; }
@@ -50,5 +50,7 @@
 </head>
   <body class="bg-gray-50 text-gray-800 antialiased">
     <div id="root"></div>
+    <!-- Load the main entry point -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
