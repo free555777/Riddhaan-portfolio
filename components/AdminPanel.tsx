@@ -94,7 +94,6 @@ const AdminPanel = () => {
     setLoading(true);
     try {
       const payload = { ...data };
-      // Remove temporary or invalid IDs to let the system generate a proper one
       if (payload.id && (payload.id.length < 5 || typeof payload.id === 'number')) {
         delete payload.id;
       }
@@ -231,15 +230,15 @@ const AdminPanel = () => {
                 <div className="space-y-6">
                   {inquiries.length === 0 ? <p className="text-center py-10 text-gray-400">No leads found.</p> : inquiries.map(inq => (
                     <div key={inq.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 flex items-start gap-6">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <h3 className="font-black text-xl mb-2">{inq.name}</h3>
                         <div className="flex gap-4 text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">
                           <span className="flex items-center gap-1"><Mail size={12} /> {inq.email}</span>
                           <span className="flex items-center gap-1"><Phone size={12} /> {inq.phone}</span>
                         </div>
-                        <div className="bg-gray-50 p-6 rounded-2xl text-gray-600 border border-gray-100 italic">"{inq.message}"</div>
+                        <div className="bg-gray-50 p-6 rounded-2xl text-gray-600 border border-gray-100 italic break-words">"{inq.message}"</div>
                       </div>
-                      <button onClick={() => handleDelete('inquiries', inq.id)} className="text-red-400 p-2 hover:bg-red-50 rounded-xl"><Trash2 size={24} /></button>
+                      <button onClick={() => handleDelete('inquiries', inq.id)} className="text-red-400 p-2 hover:bg-red-50 rounded-xl flex-shrink-0"><Trash2 size={24} /></button>
                     </div>
                   ))}
                 </div>
@@ -248,11 +247,11 @@ const AdminPanel = () => {
               {activeTab === 'services' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {services.map(s => (
-                    <div key={s.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 relative">
+                    <div key={s.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 relative flex flex-col h-full">
                       <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 text-primary"><Layout size={24} /></div>
-                      <h3 className="text-xl font-black text-gray-900 mb-2">{s.title}</h3>
-                      <p className="text-gray-500 text-sm mb-8 line-clamp-3">{s.description}</p>
-                      <div className="flex gap-2">
+                      <h3 className="text-xl font-black text-gray-900 mb-2 break-words">{s.title}</h3>
+                      <p className="text-gray-500 text-sm mb-8 line-clamp-3 break-words">{s.description}</p>
+                      <div className="flex gap-2 mt-auto">
                         <button onClick={() => setEditingItem(s)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
                         <button onClick={() => handleDelete('services', s.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
                       </div>
@@ -264,12 +263,12 @@ const AdminPanel = () => {
               {activeTab === 'faqs' && (
                 <div className="space-y-4">
                   {faqs.map(f => (
-                    <div key={f.id} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-gray-50 flex items-center justify-between gap-6">
-                      <div className="flex-1">
-                        <h3 className="font-black text-gray-900 mb-1">{f.question}</h3>
-                        <p className="text-gray-500 text-sm line-clamp-1">{f.answer}</p>
+                    <div key={f.id} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-gray-50 flex items-center justify-between gap-6 overflow-hidden">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-black text-gray-900 mb-1 break-all line-clamp-2">{f.question}</h3>
+                        <p className="text-gray-500 text-sm line-clamp-1 break-all">{f.answer}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-shrink-0">
                         <button onClick={() => setEditingItem(f)} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-primary transition-colors"><Edit size={20} /></button>
                         <button onClick={() => handleDelete('faqs', f.id!)} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-red-500 transition-colors"><Trash2 size={20} /></button>
                       </div>
@@ -277,8 +276,6 @@ const AdminPanel = () => {
                   ))}
                 </div>
               )}
-              
-              {/* Add similar lists for Portfolio and Testimonials if needed */}
             </motion.div>
           )}
         </div>
@@ -287,7 +284,7 @@ const AdminPanel = () => {
       {/* Editor Modal */}
       {editingItem && (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[40px] w-full max-w-2xl p-10 relative">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[40px] w-full max-w-2xl p-10 relative max-h-[90vh] overflow-y-auto">
             <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-900"><X size={32} /></button>
             <h3 className="text-3xl font-black mb-10 tracking-tight uppercase">Update <span className="text-primary">{activeTab.slice(0, -1)}</span></h3>
             
