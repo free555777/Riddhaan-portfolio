@@ -204,24 +204,24 @@ const AdminPanel = () => {
               {activeTab === 'dashboard' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
-                    <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 text-primary"><Users size={24} /></div>
-                    <div className="text-3xl font-black text-gray-900">{Math.floor(Math.random()*10)+2}</div>
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Live Visitors</div>
-                  </div>
-                  <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
-                    <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4 text-purple-600"><Eye size={24} /></div>
-                    <div className="text-3xl font-black text-gray-900">1,248</div>
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Total Views</div>
-                  </div>
-                  <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
                     <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4 text-amber-600"><MessageSquare size={24} /></div>
                     <div className="text-3xl font-black text-gray-900">{inquiries.length}</div>
                     <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Total Leads</div>
                   </div>
                   <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
-                    <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4 text-green-600"><TrendingUp size={24} /></div>
-                    <div className="text-3xl font-black text-gray-900">+12%</div>
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Growth</div>
+                    <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 text-primary"><Briefcase size={24} /></div>
+                    <div className="text-3xl font-black text-gray-900">{projects.length}</div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Portfolio Items</div>
+                  </div>
+                  <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
+                    <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4 text-purple-600"><Layout size={24} /></div>
+                    <div className="text-3xl font-black text-gray-900">{services.length}</div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Active Services</div>
+                  </div>
+                  <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
+                    <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4 text-green-600"><Star size={24} /></div>
+                    <div className="text-3xl font-black text-gray-900">{testimonials.length}</div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Total Reviews</div>
                   </div>
                 </div>
               )}
