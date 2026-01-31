@@ -146,10 +146,5 @@ export const FAQ_DATA: FAQItem[] = [
     id: '4',
     question: "What is the payment process?",
     answer: "Typically, we work with a 50% advance to start the project and the remaining 50% upon completion and your approval."
-  },
-  {
-    id: '5',
-    question: "Do you offer post-launch support?",
-    answer: "Yes, we provide free support for a specific duration depending on your plan (15 days to 6 months)."
   }
 ];
