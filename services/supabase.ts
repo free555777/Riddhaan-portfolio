@@ -138,7 +138,14 @@ export const deleteTestimonial = async (id: string) => {
  * FAQS
  */
 export const getFAQs = async (): Promise<FAQItem[]> => {
-  return handleRequest('faqs', () => supabase!.from('faqs').select('*').order('id', { ascending: true }));
+  const data = await handleRequest('faqs', () => supabase!.from('faqs').select('*').order('id', { ascending: true }));
+  if (!data) return [];
+  // Filter out the junk entries specified by the user
+  return data.filter((f: any) => {
+    const q = f.question.toLowerCase();
+    const isJunk = q.includes('zzzzzz') || q === 'bnm';
+    return !isJunk;
+  });
 };
 
 export const upsertFAQ = async (faq: Partial<FAQItem>) => {
