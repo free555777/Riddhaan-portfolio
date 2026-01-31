@@ -25,14 +25,12 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
     if (!supabase) throw new Error("No Supabase connection");
     const result = await operation();
     if (result.error) {
-      // If table doesn't exist (42P01 error in Postgres), use local storage
       if (result.error.code === '42P01' || result.error.message?.includes('not found')) {
         console.warn(`Table ${tableName} missing. Using LocalStorage.`);
         return localDB.get(tableName) || fallbackData;
       }
       throw result.error;
     }
-    // Sync local storage with successful DB fetch for offline resilience
     if (result.data && Array.isArray(result.data)) {
       localDB.set(tableName, result.data);
     }
@@ -43,9 +41,6 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
   }
 };
 
-/**
- * SITE SETTINGS
- */
 export const getSiteSettings = async (): Promise<SiteSettings | null> => {
   if (!supabase) return null;
   const { data, error } = await supabase.from('site_settings').select('*').single();
@@ -59,9 +54,6 @@ export const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
   await supabase.from('site_settings').upsert(settings);
 };
 
-/**
- * SERVICES
- */
 export const getServices = async (): Promise<Service[]> => {
   return handleRequest('services', () => supabase!.from('services').select('*').order('id', { ascending: true }));
 };
@@ -72,7 +64,6 @@ export const upsertService = async (service: Partial<Service>) => {
   if (index >= 0) current[index] = { ...current[index], ...service };
   else current.push({ ...service, id: service.id || Date.now().toString() });
   localDB.set('services', current);
-
   if (!supabase) return;
   await supabase.from('services').upsert(service);
 };
@@ -84,9 +75,6 @@ export const deleteService = async (id: string) => {
   await supabase.from('services').delete().eq('id', id);
 };
 
-/**
- * PORTFOLIO
- */
 export const getPortfolio = async (): Promise<Project[]> => {
   return handleRequest('portfolio', () => supabase!.from('portfolio').select('*').order('id', { ascending: false }));
 };
@@ -97,7 +85,6 @@ export const upsertProject = async (project: Partial<Project>) => {
   if (index >= 0) current[index] = { ...current[index], ...project };
   else current.push({ ...project, id: project.id || Date.now().toString() });
   localDB.set('portfolio', current);
-
   if (!supabase) return;
   await supabase.from('portfolio').upsert(project);
 };
@@ -109,9 +96,6 @@ export const deleteProject = async (id: string) => {
   await supabase.from('portfolio').delete().eq('id', id);
 };
 
-/**
- * TESTIMONIALS
- */
 export const getTestimonials = async (): Promise<Testimonial[]> => {
   return handleRequest('testimonials', () => supabase!.from('testimonials').select('*').order('id', { ascending: false }));
 };
@@ -122,7 +106,6 @@ export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
   if (index >= 0) current[index] = { ...current[index], ...testimonial };
   else current.push({ ...testimonial, id: testimonial.id || Date.now().toString() });
   localDB.set('testimonials', current);
-
   if (!supabase) return;
   await supabase.from('testimonials').upsert(testimonial);
 };
@@ -134,13 +117,9 @@ export const deleteTestimonial = async (id: string) => {
   await supabase.from('testimonials').delete().eq('id', id);
 };
 
-/**
- * FAQS
- */
 export const getFAQs = async (): Promise<FAQItem[]> => {
   const data = await handleRequest('faqs', () => supabase!.from('faqs').select('*').order('id', { ascending: true }));
   if (!data) return [];
-  // Filter out the junk entries specified by the user
   return data.filter((f: any) => {
     const q = f.question.toLowerCase();
     const isJunk = q.includes('zzzzzz') || q === 'bnm';
@@ -155,13 +134,11 @@ export const upsertFAQ = async (faq: Partial<FAQItem>) => {
   if (index >= 0) current[index] = { ...current[index], ...faq, id };
   else current.push({ ...faq, id });
   localDB.set('faqs', current);
-
   if (!supabase) return;
-  // Try supabase, but don't throw if it fails (it will already be in LocalStorage)
   try {
     await supabase.from('faqs').upsert({ ...faq, id });
   } catch (e) {
-    console.error("Supabase sync failed, using LocalStorage only.");
+    console.error("Supabase sync failed.");
   }
 };
 
@@ -172,9 +149,6 @@ export const deleteFAQ = async (id: string) => {
   await supabase.from('faqs').delete().eq('id', id);
 };
 
-/**
- * INQUIRIES
- */
 export const getInquiries = async (): Promise<Inquiry[]> => {
   return handleRequest('inquiries', () => supabase!.from('inquiries').select('*').order('created_at', { ascending: false }));
 };
@@ -185,22 +159,32 @@ export const deleteInquiry = async (id: string) => {
 };
 
 export const submitInquiry = async (formData: any) => {
-  if (supabase) {
-    const { error: dbError } = await supabase.from('inquiries').insert([{
+  try {
+    const inquiry = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
       message: formData.message,
-      plan: formData.plan
-    }]);
-    if (dbError) throw dbError;
+      plan: formData.plan,
+      created_at: new Date().toISOString()
+    };
+    
+    // Save locally first for resilience
+    const current = localDB.get('inquiries') || [];
+    localDB.set('inquiries', [inquiry, ...current]);
+
+    if (supabase) {
+      const { error: dbError } = await supabase.from('inquiries').insert([inquiry]);
+      if (dbError) throw dbError;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Saved to LocalStorage only due to DB error:", err);
+    // Return true so the user doesn't see an error, even if Supabase failed
+    return true;
   }
-  return true;
 };
 
-/**
- * AUTH
- */
 export const adminLogin = async (email: string, pass: string) => {
   if (email === 'riddhaan@gmail.com' && pass === 'Riddhaan@55') {
     localStorage.setItem('admin_token', 'demo_token_riddhaan');

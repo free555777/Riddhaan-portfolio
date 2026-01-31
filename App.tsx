@@ -72,12 +72,12 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
   const [activePopup, setActivePopup] = useState(0);
   
   const popups = [
-    { text: "⚡ Ultra Fast Loading", color: "bg-blue-600", pos: "top-[12%] left-[5%] md:top-[15%]" },
-    { text: "🛡️ 100% Secure Code", color: "bg-indigo-600", pos: "top-[20%] right-[5%] md:top-[25%]" },
+    { text: "⚡ Ultra Fast Loading", color: "bg-blue-600", pos: "top-[20%] left-[5%] md:top-[15%]" },
+    { text: "🛡️ 100% Secure Code", color: "bg-indigo-600", pos: "top-[25%] right-[5%] md:top-[25%]" },
     { text: "🔍 SEO Optimized", color: "bg-amber-500", pos: "bottom-[25%] left-[5%] md:bottom-[30%] md:left-[8%]" },
-    { text: "🎨 Pixel Perfect UI", color: "bg-pink-600", pos: "top-[40%] right-[3%] md:right-[10%]" },
+    { text: "🎨 Pixel Perfect UI", color: "bg-pink-600", pos: "top-[45%] right-[3%] md:right-[10%]" },
     { text: "🤖 Smart AI Features", color: "bg-purple-600", pos: "bottom-[12%] right-[5%] md:bottom-[15%]" },
-    { text: "💬 24/7 Expert Support", color: "bg-green-600", pos: "top-[50%] left-[2%] md:bottom-[45%] md:left-[3%]" },
+    { text: "💬 24/7 Expert Support", color: "bg-green-600", pos: "top-[55%] left-[2%] md:bottom-[45%] md:left-[3%]" },
   ];
 
   useEffect(() => {
@@ -364,11 +364,15 @@ const App = () => {
     };
 
     try {
-      await db.submitInquiry(payload);
-      alert("Success! Your enquiry has been sent.");
-      (e.target as HTMLFormElement).reset();
+      const success = await db.submitInquiry(payload);
+      if (success) {
+        alert("Success! Your enquiry has been sent.");
+        (e.target as HTMLFormElement).reset();
+      } else {
+        throw new Error("Submission failed");
+      }
     } catch (err) {
-      alert("There was an error sending your message.");
+      alert("There was an error sending your message. We've saved it locally and will check soon!");
     } finally {
       setIsSubmitting(false);
     }
