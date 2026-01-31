@@ -81,7 +81,6 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
   ];
 
   useEffect(() => {
-    // Set timing to 2500ms (2.5 seconds) as requested
     const interval = setInterval(() => {
       setActivePopup((prev) => (prev + 1) % popups.length);
     }, 2500);
@@ -92,7 +91,6 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
     <section id="home" className="relative min-h-[75vh] md:min-h-[90vh] flex items-center pt-28 md:pt-32 pb-16 md:pb-20 bg-[#F8FAFC] overflow-hidden">
       <div className="absolute top-[-10%] left-[-5%] w-[60%] md:w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[80px] md:blur-[120px] -z-10"></div>
       
-      {/* Popups Container - Fully visible on Mobile */}
       <div className="absolute inset-0 pointer-events-none z-20">
         <AnimatePresence mode="wait">
           <motion.div
@@ -354,25 +352,39 @@ const App = () => {
   const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
     const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string;
+    const message = formData.get('message') as string;
+
     const payload = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone') || '',
-      message: formData.get('message'),
+      name,
+      email,
+      phone,
+      message,
       plan: 'Inquiry from Contact Form'
     };
 
     try {
       const success = await db.submitInquiry(payload);
       if (success) {
-        alert("Success! Your enquiry has been sent.");
+        alert("Enquiry Saved! I will contact you soon.");
         (e.target as HTMLFormElement).reset();
+        
+        // --- OPTIONAL EMAIL FALLBACK TRIGGER ---
+        // Since Supabase doesn't send emails automatically, we can trigger 
+        // a mailto link as a second confirmation or just rely on the DB.
+        // const mailtoUrl = `mailto:${settings.contact_email}?subject=New Inquiry from ${name}&body=Name: ${name}%0D%0AEmail: ${email}%0D%0APhone: ${phone}%0D%0AMessage: ${message}`;
+        // window.location.href = mailtoUrl;
+        
       } else {
-        throw new Error("Submission failed");
+        throw new Error("Supabase insert failed. Please check console for details.");
       }
     } catch (err) {
-      alert("There was an error sending your message. We've saved it locally and will check soon!");
+      console.error("Submission error:", err);
+      alert("There was an error saving your message to the database. Please check your internet or try contacting via WhatsApp/Email directly.");
     } finally {
       setIsSubmitting(false);
     }
@@ -380,7 +392,6 @@ const App = () => {
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-12 h-12 text-primary animate-spin" /></div>;
 
-  // Added check for both hash and pathname to support direct /admin access
   if (hash === '#admin' || window.location.pathname === '/admin') return <AdminPanel />;
 
   return (

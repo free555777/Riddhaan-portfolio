@@ -9,7 +9,6 @@ export const supabase = (SUPABASE_URL && SUPABASE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
-// Helper to handle fallbacks to LocalStorage when Supabase tables are missing
 const localDB = {
   get: (key: string) => {
     const data = localStorage.getItem(`riddhaan_db_${key}`);
@@ -22,11 +21,11 @@ const localDB = {
 
 const handleRequest = async (tableName: string, operation: () => Promise<any>, fallbackData: any = []) => {
   try {
-    if (!supabase) throw new Error("No Supabase connection");
+    if (!supabase) throw new Error("No Supabase connection available");
     const result = await operation();
     if (result.error) {
+      console.error(`Supabase error for ${tableName}:`, result.error);
       if (result.error.code === '42P01' || result.error.message?.includes('not found')) {
-        console.warn(`Table ${tableName} missing. Using LocalStorage.`);
         return localDB.get(tableName) || fallbackData;
       }
       throw result.error;
@@ -36,7 +35,7 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
     }
     return result.data;
   } catch (err) {
-    console.warn(`Database error for ${tableName}, falling back to LocalStorage:`, err);
+    console.error(`Critical error for ${tableName}:`, err);
     return localDB.get(tableName) || fallbackData;
   }
 };
@@ -55,102 +54,72 @@ export const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
 };
 
 export const getServices = async (): Promise<Service[]> => {
-  return handleRequest('services', () => supabase!.from('services').select('*').order('id', { ascending: true }));
+  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
+  return handleRequest('services', async () => await supabase!.from('services').select('*').order('id', { ascending: true }));
 };
 
 export const upsertService = async (service: Partial<Service>) => {
-  const current = localDB.get('services') || [];
-  const index = current.findIndex((item: any) => item.id === service.id);
-  if (index >= 0) current[index] = { ...current[index], ...service };
-  else current.push({ ...service, id: service.id || Date.now().toString() });
-  localDB.set('services', current);
   if (!supabase) return;
-  await supabase.from('services').upsert(service);
+  const { error } = await supabase.from('services').upsert(service);
+  if (error) throw error;
 };
 
 export const deleteService = async (id: string) => {
-  const current = localDB.get('services') || [];
-  localDB.set('services', current.filter((item: any) => item.id !== id));
   if (!supabase) return;
   await supabase.from('services').delete().eq('id', id);
 };
 
 export const getPortfolio = async (): Promise<Project[]> => {
-  return handleRequest('portfolio', () => supabase!.from('portfolio').select('*').order('id', { ascending: false }));
+  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
+  return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('id', { ascending: false }));
 };
 
 export const upsertProject = async (project: Partial<Project>) => {
-  const current = localDB.get('portfolio') || [];
-  const index = current.findIndex((item: any) => item.id === project.id);
-  if (index >= 0) current[index] = { ...current[index], ...project };
-  else current.push({ ...project, id: project.id || Date.now().toString() });
-  localDB.set('portfolio', current);
   if (!supabase) return;
-  await supabase.from('portfolio').upsert(project);
+  const { error } = await supabase.from('portfolio').upsert(project);
+  if (error) throw error;
 };
 
 export const deleteProject = async (id: string) => {
-  const current = localDB.get('portfolio') || [];
-  localDB.set('portfolio', current.filter((item: any) => item.id !== id));
   if (!supabase) return;
   await supabase.from('portfolio').delete().eq('id', id);
 };
 
 export const getTestimonials = async (): Promise<Testimonial[]> => {
-  return handleRequest('testimonials', () => supabase!.from('testimonials').select('*').order('id', { ascending: false }));
+  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
+  return handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*').order('id', { ascending: false }));
 };
 
 export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
-  const current = localDB.get('testimonials') || [];
-  const index = current.findIndex((item: any) => item.id === testimonial.id);
-  if (index >= 0) current[index] = { ...current[index], ...testimonial };
-  else current.push({ ...testimonial, id: testimonial.id || Date.now().toString() });
-  localDB.set('testimonials', current);
   if (!supabase) return;
-  await supabase.from('testimonials').upsert(testimonial);
+  const { error } = await supabase.from('testimonials').upsert(testimonial);
+  if (error) throw error;
 };
 
 export const deleteTestimonial = async (id: string) => {
-  const current = localDB.get('testimonials') || [];
-  localDB.set('testimonials', current.filter((item: any) => item.id !== id));
   if (!supabase) return;
   await supabase.from('testimonials').delete().eq('id', id);
 };
 
 export const getFAQs = async (): Promise<FAQItem[]> => {
-  const data = await handleRequest('faqs', () => supabase!.from('faqs').select('*').order('id', { ascending: true }));
-  if (!data) return [];
-  return data.filter((f: any) => {
-    const q = f.question.toLowerCase();
-    const isJunk = q.includes('zzzzzz') || q === 'bnm';
-    return !isJunk;
-  });
+  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
+  return handleRequest('faqs', async () => await supabase!.from('faqs').select('*').order('id', { ascending: true }));
 };
 
 export const upsertFAQ = async (faq: Partial<FAQItem>) => {
-  const current = localDB.get('faqs') || [];
-  const id = faq.id || Date.now().toString();
-  const index = current.findIndex((item: any) => item.id === id);
-  if (index >= 0) current[index] = { ...current[index], ...faq, id };
-  else current.push({ ...faq, id });
-  localDB.set('faqs', current);
   if (!supabase) return;
-  try {
-    await supabase.from('faqs').upsert({ ...faq, id });
-  } catch (e) {
-    console.error("Supabase sync failed.");
-  }
+  const { error } = await supabase.from('faqs').upsert(faq);
+  if (error) throw error;
 };
 
 export const deleteFAQ = async (id: string) => {
-  const current = localDB.get('faqs') || [];
-  localDB.set('faqs', current.filter((item: any) => item.id !== id));
   if (!supabase) return;
   await supabase.from('faqs').delete().eq('id', id);
 };
 
 export const getInquiries = async (): Promise<Inquiry[]> => {
-  return handleRequest('inquiries', () => supabase!.from('inquiries').select('*').order('created_at', { ascending: false }));
+  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
+  return handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*').order('created_at', { ascending: false }));
 };
 
 export const deleteInquiry = async (id: string) => {
@@ -159,29 +128,37 @@ export const deleteInquiry = async (id: string) => {
 };
 
 export const submitInquiry = async (formData: any) => {
-  try {
-    const inquiry = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      message: formData.message,
-      plan: formData.plan,
-      created_at: new Date().toISOString()
-    };
-    
-    // Save locally first for resilience
-    const current = localDB.get('inquiries') || [];
-    localDB.set('inquiries', [inquiry, ...current]);
+  if (!supabase) {
+    console.error("Supabase client not initialized.");
+    return false;
+  }
 
-    if (supabase) {
-      const { error: dbError } = await supabase.from('inquiries').insert([inquiry]);
-      if (dbError) throw dbError;
+  const inquiry = {
+    name: formData.name,
+    email: formData.email,
+    phone: formData.phone || null,
+    message: formData.message,
+    plan: formData.plan || 'General Inquiry',
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const { data, error } = await supabase.from('inquiries').insert([inquiry]).select();
+    
+    if (error) {
+      console.error("Supabase Insert Error Detail:", error.message, error.details, error.hint);
+      throw error;
     }
+
+    console.log("Successfully saved to Supabase:", data);
     return true;
-  } catch (err) {
-    console.warn("Saved to LocalStorage only due to DB error:", err);
-    // Return true so the user doesn't see an error, even if Supabase failed
-    return true;
+  } catch (err: any) {
+    console.error("Critical submission error:", err);
+    // Alert the developer to check RLS or Table existence
+    if (err.code === '42P01') {
+      alert("Error: 'inquiries' table not found in Supabase. Please run the SQL code in your Supabase dashboard.");
+    }
+    return false;
   }
 };
 
