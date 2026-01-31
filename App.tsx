@@ -72,34 +72,36 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
   const [activePopup, setActivePopup] = useState(0);
   
   const popups = [
-    { text: "⚡ Ultra Fast Loading", color: "bg-blue-600", pos: "top-[15%] left-[5%]" },
-    { text: "🛡️ 100% Secure Code", color: "bg-indigo-600", pos: "top-[25%] right-[5%]" },
-    { text: "🔍 SEO Optimized", color: "bg-amber-500", pos: "bottom-[30%] left-[8%]" },
-    { text: "🎨 Pixel Perfect UI", color: "bg-pink-600", pos: "top-[45%] right-[10%]" },
-    { text: "🤖 Smart AI Features", color: "bg-purple-600", pos: "bottom-[15%] right-[8%]" },
-    { text: "💬 24/7 Expert Support", color: "bg-green-600", pos: "bottom-[45%] left-[3%]" },
+    { text: "⚡ Ultra Fast Loading", color: "bg-blue-600", pos: "top-[12%] left-[5%] md:top-[15%]" },
+    { text: "🛡️ 100% Secure Code", color: "bg-indigo-600", pos: "top-[20%] right-[5%] md:top-[25%]" },
+    { text: "🔍 SEO Optimized", color: "bg-amber-500", pos: "bottom-[25%] left-[5%] md:bottom-[30%] md:left-[8%]" },
+    { text: "🎨 Pixel Perfect UI", color: "bg-pink-600", pos: "top-[40%] right-[3%] md:right-[10%]" },
+    { text: "🤖 Smart AI Features", color: "bg-purple-600", pos: "bottom-[12%] right-[5%] md:bottom-[15%]" },
+    { text: "💬 24/7 Expert Support", color: "bg-green-600", pos: "top-[50%] left-[2%] md:bottom-[45%] md:left-[3%]" },
   ];
 
   useEffect(() => {
+    // Set timing to 2500ms (2.5 seconds) as requested
     const interval = setInterval(() => {
       setActivePopup((prev) => (prev + 1) % popups.length);
-    }, 3500);
+    }, 2500);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <section id="home" className="relative min-h-[70vh] md:min-h-[90vh] flex items-center pt-28 md:pt-32 pb-16 md:pb-20 bg-[#F8FAFC] overflow-hidden">
+    <section id="home" className="relative min-h-[75vh] md:min-h-[90vh] flex items-center pt-28 md:pt-32 pb-16 md:pb-20 bg-[#F8FAFC] overflow-hidden">
       <div className="absolute top-[-10%] left-[-5%] w-[60%] md:w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[80px] md:blur-[120px] -z-10"></div>
       
-      <div className="absolute inset-0 pointer-events-none hidden sm:block">
+      {/* Popups Container - Fully visible on Mobile */}
+      <div className="absolute inset-0 pointer-events-none z-20">
         <AnimatePresence mode="wait">
           <motion.div
             key={activePopup}
-            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.5, y: -20 }}
-            transition={{ type: "spring", stiffness: 100 }}
-            className={`absolute ${popups[activePopup].pos} p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-2xl flex items-center gap-3 backdrop-blur-lg border border-white/40 text-white font-black text-[10px] md:text-xs uppercase tracking-widest ${popups[activePopup].color} z-20`}
+            exit={{ opacity: 0, scale: 0.8, y: -10 }}
+            transition={{ type: "spring", stiffness: 120, damping: 12 }}
+            className={`absolute ${popups[activePopup].pos} p-3.5 md:p-5 rounded-2xl md:rounded-3xl shadow-2xl flex items-center gap-2 md:gap-3 backdrop-blur-lg border border-white/40 text-white font-black text-[9px] md:text-xs uppercase tracking-widest ${popups[activePopup].color}`}
           >
             {popups[activePopup].text}
           </motion.div>
@@ -111,7 +113,7 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
           <div className="inline-flex items-center py-1.5 md:py-2 px-4 md:px-6 rounded-full bg-white/40 backdrop-blur-md border border-white/60 text-blue-600 text-[9px] md:text-xs font-black mb-6 md:mb-10 shadow-sm uppercase tracking-widest">
             ✨ {settings.tagline}
           </div>
-          <h1 className="text-6xl sm:text-7xl md:text-9xl font-black text-gray-900 leading-[1.05] md:leading-[0.9] mb-6 md:mb-10 tracking-tighter">
+          <h1 className="text-5xl sm:text-7xl md:text-9xl font-black text-gray-900 leading-[1.05] md:leading-[0.9] mb-6 md:mb-10 tracking-tighter">
             Design. Develop. <br className="hidden sm:block" />
             <span className="text-primary italic">Deploy.</span>
           </h1>
