@@ -136,12 +136,12 @@ export const submitInquiry = async (formData: any) => {
   try {
     const { error } = await supabase.from('inquiries').insert([inquiry]);
     if (error) {
-      console.error("DB Error:", error);
+      console.error("Supabase Database Error:", error.message, error.details);
       return false;
     }
     return true;
   } catch (err) {
-    console.error("Critical submission error:", err);
+    console.error("Submission failed entirely:", err);
     return false;
   }
 };

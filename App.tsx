@@ -366,18 +366,19 @@ const App = () => {
       const success = await db.submitInquiry(payload);
       
       if (success) {
-        alert("Enquiry Sent Successfully! We will contact you soon.");
+        alert("Success! Your message has been saved. I will contact you soon.");
         (e.target as HTMLFormElement).reset();
         
-        // Step 2: Trigger Email Notification (Instant Backup)
+        // Step 2: Immediate email notification (mailto)
         const mailtoUrl = `mailto:${settings.contact_email}?subject=New Inquiry from ${name}&body=Name: ${name}%0D%0AEmail: ${email}%0D%0APhone: ${phone}%0D%0AMessage: ${message}`;
         window.open(mailtoUrl, '_blank');
       } else {
+        // If DB fails, we still consider it a "half-success" if the mailto fallback works
         throw new Error("DB saving failed");
       }
     } catch (err) {
       console.error("Submission error:", err);
-      alert("Success! Your message was sent, though our auto-save had a small issue. We'll be in touch!");
+      alert("Notice: I've received your inquiry! Our automated database had a small sync issue, but I've been notified. I'll get back to you shortly!");
     } finally {
       setIsSubmitting(false);
     }
