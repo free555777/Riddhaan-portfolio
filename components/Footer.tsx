@@ -1,8 +1,14 @@
 
 import React from 'react';
 import { Mail, Phone, MapPin, Globe, MessageCircle } from 'lucide-react';
+import { SITE_NAME } from '../constants.ts';
+import { SiteSettings } from '../types.ts';
 
-const Footer = () => {
+interface FooterProps {
+  settings?: SiteSettings;
+}
+
+const Footer: React.FC<FooterProps> = ({ settings }) => {
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -22,7 +28,16 @@ const Footer = () => {
           
           {/* Brand Section */}
           <div>
-            <h2 className="text-3xl font-black tracking-tighter mb-8 uppercase">RIDDHAAN</h2>
+            <div className="flex items-center mb-8">
+              {settings?.logo_url ? (
+                <img src={settings.logo_url} alt={SITE_NAME} className="h-8 md:h-10 w-auto object-contain" />
+              ) : (
+                <div className="flex items-center">
+                  <h2 className="text-3xl font-black tracking-tighter uppercase text-primary">{SITE_NAME}</h2>
+                  <div className="w-3 h-3 bg-accent rounded-full ml-1.5 mt-1 shadow-sm"></div>
+                </div>
+              )}
+            </div>
             <p className="text-gray-400 leading-relaxed font-medium">
               Premium custom web development for startups and visionaries. Focused on speed, aesthetics, and results.
             </p>
@@ -57,15 +72,15 @@ const Footer = () => {
             <ul className="space-y-6">
               <li className="flex items-center space-x-4">
                 <div className="text-primary"><Mail size={20} /></div>
-                <span className="text-gray-400 font-medium">riddhaanleo@gmail.com</span>
+                <span className="text-gray-400 font-medium">{settings?.contact_email || 'riddhaanleo@gmail.com'}</span>
               </li>
               <li className="flex items-center space-x-4">
                 <div className="text-primary"><MessageCircle size={20} className="text-[#25D366]" /></div>
-                <span className="text-gray-400 font-medium">+91 95212 07156</span>
+                <span className="text-gray-400 font-medium">{settings?.contact_phone || '+91 95212 07156'}</span>
               </li>
               <li className="flex items-center space-x-4">
                 <div className="text-primary"><MapPin size={20} /></div>
-                <span className="text-gray-400 font-medium">India - Remote Global</span>
+                <span className="text-gray-400 font-medium">{settings?.address || 'India - Remote Global'}</span>
               </li>
             </ul>
           </div>
@@ -73,7 +88,7 @@ const Footer = () => {
 
         <div className="border-t border-white/5 pt-12 flex flex-col md:row justify-between items-center gap-6">
           <p className="text-gray-500 text-[10px] font-black tracking-widest uppercase">
-            &copy; {new Date().getFullYear()} RIDDHAAN STUDIO. ALL RIGHTS RESERVED.
+            &copy; {new Date().getFullYear()} {SITE_NAME} STUDIO. ALL RIGHTS RESERVED.
           </p>
         </div>
       </div>

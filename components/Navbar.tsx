@@ -3,9 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SITE_NAME } from '../constants.ts';
+import { SiteSettings } from '../types.ts';
 import Button from './Button.tsx';
 
-const Navbar = () => {
+interface NavbarProps {
+  settings?: SiteSettings;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ settings }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -38,13 +43,20 @@ const Navbar = () => {
     <nav className={`fixed w-full z-[100] transition-all duration-300 ${scrolled || isOpen ? 'py-4 bg-white/95 shadow-lg backdrop-blur-md' : 'py-8 bg-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center relative">
         <div 
-          className="font-black text-2xl text-primary uppercase cursor-pointer select-none" 
+          className="cursor-pointer select-none flex items-center group" 
           onClick={() => {
             setIsOpen(false);
             window.scrollTo({top: 0, behavior: 'smooth'});
           }}
         >
-          {SITE_NAME}<span className="text-accent">.</span>
+          {settings?.logo_url ? (
+            <img src={settings.logo_url} alt={SITE_NAME} className="h-8 md:h-10 w-auto object-contain" />
+          ) : (
+            <div className="flex items-center">
+              <span className="font-black text-2xl text-primary uppercase tracking-tighter">{SITE_NAME}</span>
+              <div className="w-2.5 h-2.5 bg-accent rounded-full ml-1.5 mt-1 shadow-sm"></div>
+            </div>
+          )}
         </div>
 
         {/* Desktop Menu */}

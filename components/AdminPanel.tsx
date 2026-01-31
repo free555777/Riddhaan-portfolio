@@ -68,7 +68,8 @@ const AdminPanel = () => {
   const handleLogout = () => {
     db.logoutAdmin();
     setIsLogged(false);
-    window.location.hash = '#home';
+    // Use href to clear the /admin pathname and return to the main site
+    window.location.href = '/';
   };
 
   if (!isLogged) {

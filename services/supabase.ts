@@ -72,7 +72,7 @@ export const submitInquiry = async (formData: any) => {
   console.log("Submitting inquiry:", formData);
   
   if (supabase) {
-    // 1. Insert into Database
+    // 1. Insert into Database first
     const { error: dbError } = await supabase.from('inquiries').insert([{
       name: formData.name,
       email: formData.email,
@@ -82,29 +82,32 @@ export const submitInquiry = async (formData: any) => {
     }]);
 
     if (dbError) {
-      console.error("Database error:", dbError);
-      throw dbError;
+      console.error("Database save failed:", dbError);
+      throw new Error(`Failed to save to database: ${dbError.message}`);
     }
 
-    // 2. Trigger Edge Function (using official SDK method)
-    // The .invoke() method handles headers, apiKey, and base URL automatically.
-    const { data, error: funcError } = await supabase.functions.invoke('send-inquiry-email', {
-      body: {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        message: formData.message
-      }
-    });
+    // 2. Attempt to trigger Edge Function for email notification
+    // We wrap this in a try-catch because if the function isn't deployed, 
+    // we still want the user to see a 'Success' message since the DB save worked.
+    try {
+      const { error: funcError } = await supabase.functions.invoke('send-inquiry-email', {
+        body: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          message: formData.message,
+          plan: formData.plan
+        }
+      });
 
-    if (funcError) {
-      console.error("Edge Function call failed:", funcError);
-      // NOTE: "Failed to fetch" often means your Edge Function is missing CORS headers 
-      // or the URL is incorrect. Using .invoke() helps ensure the URL is correct.
-      throw new Error(`DB saved, but notification failed: ${funcError.message || 'CORS or Network Error'}`);
+      if (funcError) {
+        console.warn("Email notification function failed (Expected if not deployed):", funcError);
+      }
+    } catch (e) {
+      console.warn("Edge function invocation failed. Data is saved in DB but no email sent.", e);
     }
   } else {
-    // Fallback for local testing if Supabase isn't reachable
+    // Fallback for local testing
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
   

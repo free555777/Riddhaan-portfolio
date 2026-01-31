@@ -374,11 +374,12 @@ const App = () => {
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-12 h-12 text-primary animate-spin" /></div>;
 
-  if (hash === '#admin') return <AdminPanel />;
+  // Added check for both hash and pathname to support direct /admin access
+  if (hash === '#admin' || window.location.pathname === '/admin') return <AdminPanel />;
 
   return (
     <div className="antialiased selection:bg-primary selection:text-white">
-      <Navbar />
+      <Navbar settings={settings} />
       <Hero settings={settings} />
       <About />
       <Services services={services} />
@@ -439,7 +440,7 @@ const App = () => {
         </div>
       </section>
       
-      <Footer />
+      <Footer settings={settings} />
       <FloatingWhatsApp />
     </div>
   );
