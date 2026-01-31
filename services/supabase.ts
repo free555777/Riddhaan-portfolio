@@ -11,9 +11,8 @@ export const supabase = (SUPABASE_URL && SUPABASE_KEY)
   : null;
 
 /**
- * GENERIC FETCHERS
+ * SITE SETTINGS
  */
-
 export const getSiteSettings = async (): Promise<SiteSettings | null> => {
   if (!supabase) return null;
   const { data, error } = await supabase.from('site_settings').select('*').single();
@@ -27,34 +26,75 @@ export const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
   if (error) throw error;
 };
 
-export const getPricingPlans = async (): Promise<PricingPlan[]> => {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('pricing_plans').select('*').order('price', { ascending: true });
-  if (error) return [];
-  return data;
-};
-
+/**
+ * SERVICES
+ */
 export const getServices = async (): Promise<Service[]> => {
   if (!supabase) return [];
-  const { data, error } = await supabase.from('services').select('*').eq('status', 'active');
+  const { data, error } = await supabase.from('services').select('*').order('id', { ascending: true });
   if (error) return [];
   return data;
 };
 
+export const upsertService = async (service: Partial<Service>) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('services').upsert(service);
+  if (error) throw error;
+};
+
+export const deleteService = async (id: string) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('services').delete().eq('id', id);
+  if (error) throw error;
+};
+
+/**
+ * PORTFOLIO
+ */
 export const getPortfolio = async (): Promise<Project[]> => {
   if (!supabase) return [];
-  const { data, error } = await supabase.from('portfolio').select('*').eq('status', 'published');
+  const { data, error } = await supabase.from('portfolio').select('*').order('id', { ascending: false });
   if (error) return [];
   return data;
 };
 
+export const upsertProject = async (project: Partial<Project>) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('portfolio').upsert(project);
+  if (error) throw error;
+};
+
+export const deleteProject = async (id: string) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('portfolio').delete().eq('id', id);
+  if (error) throw error;
+};
+
+/**
+ * TESTIMONIALS
+ */
 export const getTestimonials = async (): Promise<Testimonial[]> => {
   if (!supabase) return [];
-  const { data, error } = await supabase.from('testimonials').select('*').eq('status', 'approved');
+  const { data, error } = await supabase.from('testimonials').select('*').order('id', { ascending: false });
   if (error) return [];
   return data;
 };
 
+export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('testimonials').upsert(testimonial);
+  if (error) throw error;
+};
+
+export const deleteTestimonial = async (id: string) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('testimonials').delete().eq('id', id);
+  if (error) throw error;
+};
+
+/**
+ * INQUIRIES
+ */
 export const getInquiries = async (): Promise<Inquiry[]> => {
   if (!supabase) return [];
   const { data, error } = await supabase.from('inquiries').select('*').order('created_at', { ascending: false });
@@ -69,10 +109,7 @@ export const deleteInquiry = async (id: string) => {
 };
 
 export const submitInquiry = async (formData: any) => {
-  console.log("Submitting inquiry:", formData);
-  
   if (supabase) {
-    // 1. Insert into Database first
     const { error: dbError } = await supabase.from('inquiries').insert([{
       name: formData.name,
       email: formData.email,
@@ -81,58 +118,38 @@ export const submitInquiry = async (formData: any) => {
       plan: formData.plan
     }]);
 
-    if (dbError) {
-      console.error("Database save failed:", dbError);
-      throw new Error(`Failed to save to database: ${dbError.message}`);
-    }
+    if (dbError) throw dbError;
 
-    // 2. Attempt to trigger Edge Function for email notification
-    // We wrap this in a try-catch because if the function isn't deployed, 
-    // we still want the user to see a 'Success' message since the DB save worked.
     try {
-      const { error: funcError } = await supabase.functions.invoke('send-inquiry-email', {
-        body: {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          message: formData.message,
-          plan: formData.plan
-        }
+      await supabase.functions.invoke('send-inquiry-email', {
+        body: formData
       });
-
-      if (funcError) {
-        console.warn("Email notification function failed (Expected if not deployed):", funcError);
-      }
     } catch (e) {
-      console.warn("Edge function invocation failed. Data is saved in DB but no email sent.", e);
+      console.warn("Email function failed - expected if not deployed.");
     }
-  } else {
-    // Fallback for local testing
-    await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  
   return true;
 };
 
 /**
- * AUTH HELPERS
+ * PRICING
+ */
+export const getPricingPlans = async (): Promise<PricingPlan[]> => {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('pricing_plans').select('*').order('id', { ascending: true });
+  if (error) return [];
+  return data;
+};
+
+/**
+ * AUTH
  */
 export const adminLogin = async (email: string, pass: string) => {
-  // Demo check for specified credentials as requested
   if (email === 'riddhaan@gmail.com' && pass === 'Riddhaan@55') {
     localStorage.setItem('admin_token', 'demo_token_riddhaan');
     return { success: true };
   }
-  
-  if (!supabase) return { success: false, error: 'Supabase not connected' };
-  
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: pass,
-  });
-
-  if (error) return { success: false, error: error.message };
-  return { success: true, user: data.user };
+  return { success: false };
 };
 
 export const isAdminLoggedIn = () => {
@@ -141,5 +158,4 @@ export const isAdminLoggedIn = () => {
 
 export const logoutAdmin = () => {
   localStorage.removeItem('admin_token');
-  window.location.hash = '#home';
 };
