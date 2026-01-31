@@ -1,33 +1,26 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
-
-const faqData = [
-  {
-    question: "How long does it take to build a website?",
-    answer: "The timeline depends on the complexity of the project. A basic landing page can be delivered in 3-5 days, while a standard business website takes 7-10 days. Premium projects with advanced features may take up to 2-3 weeks."
-  },
-  {
-    question: "Do you provide hosting and domain services?",
-    answer: "We assist you in setting up your hosting and domain. While we don't sell them directly, we recommend the best providers based on your budget and requirements to ensure maximum uptime."
-  },
-  {
-    question: "Will my website be mobile-responsive?",
-    answer: "Absolutely. Every website we build is 'Mobile-First'. It will look and perform flawlessly on smartphones, tablets, laptops, and large desktop screens."
-  },
-  {
-    question: "What is the payment process?",
-    answer: "Typically, we work with a 50% advance to start the project and the remaining 50% upon completion and your approval before the final deployment."
-  },
-  {
-    question: "Do you offer post-launch support?",
-    answer: "Yes, we provide free support for a specific duration depending on your plan (15 days to 6 months). After that, we offer affordable maintenance packages."
-  }
-];
+import { FAQ_DATA } from '../constants.ts';
+import * as db from '../services/supabase.ts';
+import { FAQItem } from '../types.ts';
 
 const FAQ = () => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [faqs, setFaqs] = useState<FAQItem[]>(FAQ_DATA);
+
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      try {
+        const data = await db.getFAQs();
+        if (data && data.length > 0) setFaqs(data);
+      } catch (e) {
+        console.warn("Could not fetch FAQs from DB, using defaults.");
+      }
+    };
+    fetchFaqs();
+  }, []);
 
   return (
     <section id="faq" className="py-20 md:py-32 bg-gray-50">
@@ -38,9 +31,9 @@ const FAQ = () => {
         </div>
 
         <div className="space-y-3 md:space-y-4">
-          {faqData.map((item, index) => (
+          {faqs.map((item, index) => (
             <div 
-              key={index} 
+              key={item.id || index} 
               className="bg-white rounded-2xl md:rounded-3xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
             >
               <button

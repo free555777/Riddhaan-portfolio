@@ -1,8 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { SiteSettings, PricingPlan, Service, Project, Testimonial, Inquiry } from '../types';
+import { SiteSettings, PricingPlan, Service, Project, Testimonial, Inquiry, FAQItem } from '../types';
 
-// Using provided credentials as defaults
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gajyeusnyawrpdcjveov.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_5TufyblCS0IUUvxA_OqB5g_iDnarZpp';
 
@@ -93,6 +92,28 @@ export const deleteTestimonial = async (id: string) => {
 };
 
 /**
+ * FAQS
+ */
+export const getFAQs = async (): Promise<FAQItem[]> => {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('faqs').select('*').order('id', { ascending: true });
+  if (error) return [];
+  return data;
+};
+
+export const upsertFAQ = async (faq: Partial<FAQItem>) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('faqs').upsert(faq);
+  if (error) throw error;
+};
+
+export const deleteFAQ = async (id: string) => {
+  if (!supabase) return;
+  const { error } = await supabase.from('faqs').delete().eq('id', id);
+  if (error) throw error;
+};
+
+/**
  * INQUIRIES
  */
 export const getInquiries = async (): Promise<Inquiry[]> => {
@@ -119,14 +140,6 @@ export const submitInquiry = async (formData: any) => {
     }]);
 
     if (dbError) throw dbError;
-
-    try {
-      await supabase.functions.invoke('send-inquiry-email', {
-        body: formData
-      });
-    } catch (e) {
-      console.warn("Email function failed - expected if not deployed.");
-    }
   }
   return true;
 };

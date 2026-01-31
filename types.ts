@@ -10,7 +10,7 @@ export interface PricingPlan {
 }
 
 export interface Service {
-  id: string;
+  id?: string;
   title: string;
   description: string;
   icon: string;
@@ -18,7 +18,7 @@ export interface Service {
 }
 
 export interface Project {
-  id: string;
+  id?: string;
   title: string;
   category: string;
   image: string;
@@ -28,13 +28,19 @@ export interface Project {
 }
 
 export interface Testimonial {
-  id: string;
+  id?: string;
   name: string;
   role: string;
   content: string;
   avatar: string;
   rating: number;
   status: 'pending' | 'approved';
+}
+
+export interface FAQItem {
+  id?: string;
+  question: string;
+  answer: string;
 }
 
 export interface Inquiry {
