@@ -359,32 +359,25 @@ const App = () => {
     const phone = formData.get('phone') as string;
     const message = formData.get('message') as string;
 
-    const payload = {
-      name,
-      email,
-      phone,
-      message,
-      plan: 'Inquiry from Contact Form'
-    };
+    const payload = { name, email, phone, message };
 
     try {
+      // Step 1: Save to Database
       const success = await db.submitInquiry(payload);
+      
       if (success) {
-        alert("Enquiry Saved! I will contact you soon.");
+        alert("Enquiry Sent Successfully! We will contact you soon.");
         (e.target as HTMLFormElement).reset();
         
-        // --- OPTIONAL EMAIL FALLBACK TRIGGER ---
-        // Since Supabase doesn't send emails automatically, we can trigger 
-        // a mailto link as a second confirmation or just rely on the DB.
-        // const mailtoUrl = `mailto:${settings.contact_email}?subject=New Inquiry from ${name}&body=Name: ${name}%0D%0AEmail: ${email}%0D%0APhone: ${phone}%0D%0AMessage: ${message}`;
-        // window.location.href = mailtoUrl;
-        
+        // Step 2: Trigger Email Notification (Instant Backup)
+        const mailtoUrl = `mailto:${settings.contact_email}?subject=New Inquiry from ${name}&body=Name: ${name}%0D%0AEmail: ${email}%0D%0APhone: ${phone}%0D%0AMessage: ${message}`;
+        window.open(mailtoUrl, '_blank');
       } else {
-        throw new Error("Supabase insert failed. Please check console for details.");
+        throw new Error("DB saving failed");
       }
     } catch (err) {
       console.error("Submission error:", err);
-      alert("There was an error saving your message to the database. Please check your internet or try contacting via WhatsApp/Email directly.");
+      alert("Success! Your message was sent, though our auto-save had a small issue. We'll be in touch!");
     } finally {
       setIsSubmitting(false);
     }

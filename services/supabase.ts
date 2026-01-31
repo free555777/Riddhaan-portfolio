@@ -21,7 +21,7 @@ const localDB = {
 
 const handleRequest = async (tableName: string, operation: () => Promise<any>, fallbackData: any = []) => {
   try {
-    if (!supabase) throw new Error("No Supabase connection available");
+    if (!supabase) throw new Error("No Supabase connection");
     const result = await operation();
     if (result.error) {
       console.error(`Supabase error for ${tableName}:`, result.error);
@@ -54,7 +54,6 @@ export const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
 };
 
 export const getServices = async (): Promise<Service[]> => {
-  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
   return handleRequest('services', async () => await supabase!.from('services').select('*').order('id', { ascending: true }));
 };
 
@@ -70,7 +69,6 @@ export const deleteService = async (id: string) => {
 };
 
 export const getPortfolio = async (): Promise<Project[]> => {
-  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
   return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('id', { ascending: false }));
 };
 
@@ -86,7 +84,6 @@ export const deleteProject = async (id: string) => {
 };
 
 export const getTestimonials = async (): Promise<Testimonial[]> => {
-  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
   return handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*').order('id', { ascending: false }));
 };
 
@@ -102,7 +99,6 @@ export const deleteTestimonial = async (id: string) => {
 };
 
 export const getFAQs = async (): Promise<FAQItem[]> => {
-  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
   return handleRequest('faqs', async () => await supabase!.from('faqs').select('*').order('id', { ascending: true }));
 };
 
@@ -118,7 +114,6 @@ export const deleteFAQ = async (id: string) => {
 };
 
 export const getInquiries = async (): Promise<Inquiry[]> => {
-  // Wrapped in async to resolve PostgrestFilterBuilder into a Promise
   return handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*').order('created_at', { ascending: false }));
 };
 
@@ -128,36 +123,25 @@ export const deleteInquiry = async (id: string) => {
 };
 
 export const submitInquiry = async (formData: any) => {
-  if (!supabase) {
-    console.error("Supabase client not initialized.");
-    return false;
-  }
+  if (!supabase) return false;
 
   const inquiry = {
     name: formData.name,
     email: formData.email,
-    phone: formData.phone || null,
+    phone: formData.phone || '',
     message: formData.message,
-    plan: formData.plan || 'General Inquiry',
-    created_at: new Date().toISOString()
+    plan: formData.plan || 'General Inquiry'
   };
 
   try {
-    const { data, error } = await supabase.from('inquiries').insert([inquiry]).select();
-    
+    const { error } = await supabase.from('inquiries').insert([inquiry]);
     if (error) {
-      console.error("Supabase Insert Error Detail:", error.message, error.details, error.hint);
-      throw error;
+      console.error("DB Error:", error);
+      return false;
     }
-
-    console.log("Successfully saved to Supabase:", data);
     return true;
-  } catch (err: any) {
+  } catch (err) {
     console.error("Critical submission error:", err);
-    // Alert the developer to check RLS or Table existence
-    if (err.code === '42P01') {
-      alert("Error: 'inquiries' table not found in Supabase. Please run the SQL code in your Supabase dashboard.");
-    }
     return false;
   }
 };
