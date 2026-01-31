@@ -366,19 +366,22 @@ const App = () => {
       const success = await db.submitInquiry(payload);
       
       if (success) {
-        alert("Success! Your message has been saved. I will contact you soon.");
-        (e.target as HTMLFormElement).reset();
-        
-        // Step 2: Immediate email notification (mailto)
-        const mailtoUrl = `mailto:${settings.contact_email}?subject=New Inquiry from ${name}&body=Name: ${name}%0D%0AEmail: ${email}%0D%0APhone: ${phone}%0D%0AMessage: ${message}`;
-        window.open(mailtoUrl, '_blank');
+        alert("Success! Inquiry Saved. I will contact you soon.");
       } else {
-        // If DB fails, we still consider it a "half-success" if the mailto fallback works
-        throw new Error("DB saving failed");
+        // Log the failure but don't show the scary alert immediately
+        console.warn("Database save failed, falling back to direct contact.");
       }
+      
+      // Step 2: Immediate email notification via mailto (Ensures you get the message no matter what)
+      const mailtoUrl = `mailto:${settings.contact_email}?subject=New Inquiry from ${name}&body=Name: ${name}%0D%0AEmail: ${email}%0D%0APhone: ${phone}%0D%0AMessage: ${message}`;
+      window.open(mailtoUrl, '_blank');
+      
+      (e.target as HTMLFormElement).reset();
+      
     } catch (err) {
       console.error("Submission error:", err);
-      alert("Notice: I've received your inquiry! Our automated database had a small sync issue, but I've been notified. I'll get back to you shortly!");
+      // Even if everything breaks, let them know how to reach you
+      alert("Note: Please contact me directly via WhatsApp or Email if the form doesn't work. Thank you!");
     } finally {
       setIsSubmitting(false);
     }

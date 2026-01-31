@@ -123,8 +123,12 @@ export const deleteInquiry = async (id: string) => {
 };
 
 export const submitInquiry = async (formData: any) => {
-  if (!supabase) return false;
+  if (!supabase) {
+    console.error("Supabase client is not available.");
+    return false;
+  }
 
+  // Exact mapping to match the SQL table 'inquiries'
   const inquiry = {
     name: formData.name,
     email: formData.email,
@@ -136,12 +140,12 @@ export const submitInquiry = async (formData: any) => {
   try {
     const { error } = await supabase.from('inquiries').insert([inquiry]);
     if (error) {
-      console.error("Supabase Database Error:", error.message, error.details);
+      console.error("DB Save Error:", error.message, error.details);
       return false;
     }
     return true;
   } catch (err) {
-    console.error("Submission failed entirely:", err);
+    console.error("Network or critical error during submission:", err);
     return false;
   }
 };
