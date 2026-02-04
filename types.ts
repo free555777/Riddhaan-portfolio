@@ -25,6 +25,7 @@ export interface Project {
   description: string;
   link?: string;
   status: 'published' | 'draft';
+  project_type?: 'real' | 'demo';
 }
 
 export interface Testimonial {

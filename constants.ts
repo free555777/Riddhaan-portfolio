@@ -110,7 +110,18 @@ export const PORTFOLIO_ITEMS: Project[] = [
     image: 'https://i.postimg.cc/nhxBXB7z/1000170217.jpg',
     description: 'A clean, trustworthy buying social media grow reels bundle and full costomized and integrat payment gateway.',
     link: 'https://reelmaster.vercel.app/',
-    status: 'published'
+    status: 'published',
+    project_type: 'real'
+  },
+  {
+    id: '2',
+    title: 'PixelSpark',
+    category: 'Cafe and Restaurent',
+    image: 'https://i.postimg.cc/ryjRr7Pf/a-iss-image-ko-4k-or-h.jpg',
+    description: 'A high-end restaurant and cafe management landing page with a modern UI and food ordering simulation.',
+    link: 'http://restaurant-cafe-55.netlify.app/',
+    status: 'published',
+    project_type: 'demo'
   },
 ];
 

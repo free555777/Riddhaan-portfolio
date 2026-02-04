@@ -261,26 +261,53 @@ const AdminPanel = () => {
               )}
 
               {activeTab === 'portfolio' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projects.map(p => (
-                    <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col">
-                      <div className="h-48 w-full bg-gray-100">
-                        <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="p-8 flex-1 flex flex-col">
-                        <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">{p.category}</div>
-                        <h3 className="text-xl font-black text-gray-900 mb-2">{p.title}</h3>
-                        <p className="text-gray-500 text-sm mb-6 line-clamp-2">{p.description}</p>
-                        <div className="flex gap-2 mt-auto">
-                          <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
-                          <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                          {p.link && (
-                            <a href={p.link} target="_blank" rel="noreferrer" className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-primary transition-all"><ExternalLink size={16} /></a>
-                          )}
+                <div className="space-y-12">
+                   {/* Real Projects List */}
+                   <div>
+                    <h3 className="text-xl font-black mb-6 text-gray-400 uppercase tracking-widest">Real Projects</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {projects.filter(p => p.project_type === 'real' || !p.project_type).map(p => (
+                        <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col">
+                          <div className="h-48 w-full bg-gray-100 relative">
+                            <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="p-8 flex-1 flex flex-col">
+                            <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">{p.category}</div>
+                            <h3 className="text-xl font-black text-gray-900 mb-2">{p.title}</h3>
+                            <div className="flex gap-2 mt-auto">
+                              <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
+                              <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Demo Projects List */}
+                  <div>
+                    <h3 className="text-xl font-black mb-6 text-gray-400 uppercase tracking-widest">Demo Projects</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {projects.filter(p => p.project_type === 'demo').map(p => (
+                        <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col">
+                          <div className="h-48 w-full bg-gray-100 opacity-60">
+                            <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="p-8 flex-1 flex flex-col">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{p.category}</div>
+                            <h3 className="text-xl font-black text-gray-900 mb-2">{p.title}</h3>
+                            <div className="flex gap-2 mt-auto">
+                              <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
+                              <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {projects.filter(p => p.project_type === 'demo').length === 0 && (
+                        <div className="col-span-full py-12 border-2 border-dashed border-gray-100 rounded-[32px] text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No demo projects added yet.</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -354,8 +381,24 @@ const AdminPanel = () => {
               )}
               {activeTab === 'portfolio' && (
                 <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Project Type</label>
+                      <select 
+                        className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold"
+                        value={editingItem.project_type || 'real'}
+                        onChange={e => setEditingItem({...editingItem, project_type: e.target.value as 'real' | 'demo'})}
+                      >
+                        <option value="real">Real Project</option>
+                        <option value="demo">Demo Project</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Category</label>
+                      <input required placeholder="e.g. E-Commerce" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
+                    </div>
+                  </div>
                   <input required placeholder="Title" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
-                  <input required placeholder="Category" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
                   <input required placeholder="Image URL" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.image || ''} onChange={e => setEditingItem({...editingItem, image: e.target.value})} />
                   <input placeholder="Project Live URL (e.g. https://...)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.link || ''} onChange={e => setEditingItem({...editingItem, link: e.target.value})} />
                   <textarea required placeholder="Description" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[100px]" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />

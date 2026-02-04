@@ -30,7 +30,7 @@ import { SiteSettings, PricingPlan, Service, Project, Testimonial } from './type
 const IconMap: Record<string, React.ReactNode> = {
   Layout: <LayoutIcon className="w-8 h-8" />,
   Smartphone: <Smartphone className="w-8 h-8" />,
-  ShoppingCart: <ShoppingCart className="w-8 h-8" />,
+  ShoppingCart: <ShoppingCart className="ShoppingCart w-8 h-8" />,
   Search: <Search className="w-8 h-8" />,
   ShieldCheck: <ShieldCheck className="w-8 h-8" />,
   Database: <Database className="w-8 h-8" />,
@@ -88,8 +88,37 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
   }, []);
 
   return (
-    <section id="home" className="relative min-h-[75vh] md:min-h-[90vh] flex items-center pt-28 md:pt-32 pb-16 md:pb-20 bg-[#F8FAFC] overflow-hidden">
-      <div className="absolute top-[-10%] left-[-5%] w-[60%] md:w-[40%] h-[40%] bg-blue-200/40 rounded-full blur-[80px] md:blur-[120px] -z-10"></div>
+    <section id="home" className="relative min-h-[75vh] md:min-h-[90vh] flex items-center pt-28 md:pt-32 pb-16 md:pb-20 overflow-hidden">
+      {/* PREMIUM MESH GRADIENT BACKGROUND - EXACT IMAGE MATCH COLORS */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 bg-white">
+        {/* Sky Blue Blob (Top-Left Focus) */}
+        <motion.div
+          animate={{
+            x: [-40, 40, -40],
+            y: [-30, 30, -30],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-[10%] -left-[10%] w-full h-[80%] bg-[#4D88FF] rounded-full blur-[150px] md:blur-[250px] opacity-60"
+        />
+        
+        {/* Golden Yellow Blob (Bottom-Right Focus) */}
+        <motion.div
+          animate={{
+            x: [40, -40, 40],
+            y: [30, -30, 30],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute -bottom-[20%] -right-[10%] w-full h-[90%] bg-[#FFF6A1] rounded-full blur-[140px] md:blur-[230px] opacity-80"
+        />
+
+        {/* Central White Blending Layer for Softness */}
+        <div className="absolute inset-0 bg-white/10 backdrop-blur-[10px]"></div>
+
+        {/* Subtle Noise Texture for Quality Feel */}
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/p6.png')]"></div>
+      </div>
       
       <div className="absolute inset-0 pointer-events-none z-20">
         <AnimatePresence mode="wait">
@@ -108,19 +137,19 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full text-center">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center py-1.5 md:py-2 px-4 md:px-6 rounded-full bg-white/40 backdrop-blur-md border border-white/60 text-blue-600 text-[9px] md:text-xs font-black mb-6 md:mb-10 shadow-sm uppercase tracking-widest">
+          <div className="inline-flex items-center py-1.5 md:py-2 px-4 md:px-6 rounded-full bg-white/50 backdrop-blur-md border border-white/80 text-blue-700 text-[9px] md:text-xs font-black mb-6 md:mb-10 shadow-sm uppercase tracking-widest">
             ✨ {settings.tagline}
           </div>
           <h1 className="text-5xl sm:text-7xl md:text-9xl font-black text-gray-900 leading-[1.05] md:leading-[0.9] mb-6 md:mb-10 tracking-tighter">
             Design. Develop. <br className="hidden sm:block" />
             <span className="text-primary italic">Deploy.</span>
           </h1>
-          <p className="text-base sm:text-lg md:text-2xl text-gray-500 mb-8 md:mb-14 leading-relaxed max-w-2xl mx-auto font-medium px-4 md:px-0">
+          <p className="text-base sm:text-lg md:text-2xl text-gray-700 mb-8 md:mb-14 leading-relaxed max-w-2xl mx-auto font-semibold px-4 md:px-0">
             {settings.seo_description}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 md:gap-6 px-4 md:px-0">
-            <Button size="lg" className="rounded-2xl px-10 md:px-12 py-3.5 md:py-5 w-full sm:w-auto text-xs md:text-sm" onClick={() => scrollToSection('pricing')}>View Plans</Button>
-            <Button variant="outline" size="lg" className="rounded-2xl px-10 md:px-12 py-3.5 md:py-5 w-full sm:w-auto text-xs md:text-sm" onClick={() => scrollToSection('portfolio')}>Our Work</Button>
+            <Button size="lg" className="rounded-2xl px-10 md:px-12 py-3.5 md:py-5 w-full sm:w-auto text-xs md:text-sm shadow-2xl shadow-blue-500/30" onClick={() => scrollToSection('pricing')}>View Plans</Button>
+            <Button variant="outline" size="lg" className="rounded-2xl px-10 md:px-12 py-3.5 md:py-5 w-full sm:w-auto text-xs md:text-sm bg-white/20 backdrop-blur-sm border-white/40 text-blue-900" onClick={() => scrollToSection('portfolio')}>Our Work</Button>
           </div>
         </motion.div>
       </div>
@@ -225,42 +254,74 @@ const Services = ({ services }: { services: Service[] }) => (
   </section>
 );
 
-const Portfolio = ({ items }: { items: Project[] }) => (
-  <section id="portfolio" className="py-16 md:py-32 bg-white">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <SectionHeader title="Featured Work" subtitle="A selection of high-end projects delivered recently" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12">
-        {items.map((item, idx) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -10, scale: 1.02 }}
-            viewport={{ once: true }}
-            transition={{ delay: idx * 0.1, duration: 0.5 }}
-            className="transition-all duration-300"
-          >
-            <a 
-              href={item.link} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="group block relative rounded-[24px] md:rounded-[40px] overflow-hidden shadow-2xl aspect-[16/9] bg-gray-100"
-            >
-              <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt={item.title} />
-              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent flex flex-col justify-end p-6 md:p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <h3 className="text-white text-base md:text-2xl font-black mb-1">{item.title}</h3>
-                <p className="text-gray-300 text-[8px] md:text-sm mb-3 md:mb-4 font-medium uppercase tracking-widest">{item.category}</p>
-                <div className="text-white text-[10px] md:text-sm font-black flex items-center group-hover:translate-x-2 transition-transform duration-300">
-                  VIEW PROJECT <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
-                </div>
-              </div>
-            </a>
-          </motion.div>
-        ))}
+// --- Fix: Using React.FC properly types the component to include common React props like 'key' ---
+const ProjectCard: React.FC<{ item: Project, idx: number }> = ({ item, idx }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    whileHover={{ y: -10, scale: 1.02 }}
+    viewport={{ once: true }}
+    transition={{ delay: idx * 0.1, duration: 0.5 }}
+    className="transition-all duration-300"
+  >
+    <a 
+      href={item.link} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="group block relative rounded-[24px] md:rounded-[40px] overflow-hidden shadow-2xl aspect-[16/9] bg-gray-100"
+    >
+      <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt={item.title} />
+      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent flex flex-col justify-end p-6 md:p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <h3 className="text-white text-base md:text-2xl font-black mb-1">{item.title}</h3>
+        <p className="text-gray-300 text-[8px] md:text-sm mb-3 md:mb-4 font-medium uppercase tracking-widest">{item.category}</p>
+        <div className="text-white text-[10px] md:text-sm font-black flex items-center group-hover:translate-x-2 transition-transform duration-300">
+          VIEW PROJECT <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
+        </div>
       </div>
-    </div>
-  </section>
+    </a>
+  </motion.div>
 );
+
+const Portfolio = ({ items }: { items: Project[] }) => {
+  const realProjects = items.filter(p => p.project_type === 'real' || !p.project_type);
+  const demoProjects = items.filter(p => p.project_type === 'demo');
+
+  return (
+    <section id="portfolio" className="py-16 md:py-32 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHeader title="Featured Work" subtitle="A selection of high-end projects delivered recently" />
+        
+        {/* Real Projects Section */}
+        <div className="mb-20">
+          <div className="flex items-center gap-4 mb-10">
+            <h3 className="text-xl md:text-3xl font-black text-gray-900 tracking-tight">Real Projects</h3>
+            <div className="h-px flex-1 bg-gray-100"></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12">
+            {realProjects.map((item, idx) => (
+              <ProjectCard key={item.id} item={item} idx={idx} />
+            ))}
+          </div>
+        </div>
+
+        {/* Demo Projects Section */}
+        {demoProjects.length > 0 && (
+          <div>
+            <div className="flex items-center gap-4 mb-10">
+              <h3 className="text-xl md:text-3xl font-black text-gray-500 tracking-tight">Demo & Practice</h3>
+              <div className="h-px flex-1 bg-gray-100"></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12 opacity-80 hover:opacity-100 transition-opacity">
+              {demoProjects.map((item, idx) => (
+                <ProjectCard key={item.id} item={item} idx={idx} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
 
 const Reviews = ({ testimonials }: { testimonials: Testimonial[] }) => (
   <section id="reviews" className="py-16 md:py-32 bg-[#F8FAFC]">
