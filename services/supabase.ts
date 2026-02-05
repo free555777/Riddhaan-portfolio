@@ -40,35 +40,20 @@ const localDB = {
 
 const handleRequest = async (tableName: string, operation: () => Promise<any>, fallbackData: any = []) => {
   const localItems = localDB.get(tableName) || [];
-  
   try {
     if (!supabase) return localItems.length > 0 ? localItems : fallbackData;
-    
     const { data, error } = await operation();
     if (error) throw error;
-    
     const serverItems = (data && Array.isArray(data)) ? data : [];
     
-    // Merge logic: Prioritize server data.
-    // Local items are only kept if they haven't been synced (id starts with 'local_')
     const mergedMap = new Map();
-    
-    // 1. Add server items (Source of Truth)
     serverItems.forEach((item: any) => mergedMap.set(item.id, item));
-    
-    // 2. Add local items only if they are not yet in the server list
     localItems.forEach((item: any) => {
-      // Check if this local item has already been synced (we might find a server version with same title/desc)
-      // or if it's uniquely local.
       if (typeof item.id === 'string' && item.id.startsWith('local_')) {
-        // Simple check: if a server item with the same title exists, we assume it's synced
-        const isAlreadySynced = serverItems.some(si => si.title === item.title);
-        if (!isAlreadySynced) {
-          mergedMap.set(item.id, item);
-        }
+        const alreadyExists = serverItems.some(si => si.title === item.title);
+        if (!alreadyExists) mergedMap.set(item.id, item);
       }
     });
-    
     const finalData = Array.from(mergedMap.values());
     localDB.set(tableName, finalData);
     return finalData;
@@ -78,137 +63,109 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
   }
 };
 
-export const getSiteSettings = async (): Promise<SiteSettings | null> => {
+export const getSiteSettings = async () => {
   if (!supabase) return localDB.get('site_settings');
   try {
     const { data, error } = await supabase.from('site_settings').select('*').single();
-    if (error) throw error;
-    localDB.set('site_settings', data);
-    return data;
-  } catch (e) {
-    return localDB.get('site_settings');
-  }
+    if (!error) localDB.set('site_settings', data);
+    return data || localDB.get('site_settings');
+  } catch (e) { return localDB.get('site_settings'); }
 };
 
-export const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
+export const updateSiteSettings = async (settings: any) => {
   localDB.set('site_settings', settings);
   if (!supabase) return { success: true, cloud: false };
   const { error } = await supabase.from('site_settings').upsert(settings);
-  return { success: !error, cloud: !error };
+  return { success: !error, cloud: !error, error: error?.message };
 };
 
-export const getServices = async (): Promise<Service[]> => {
-  return handleRequest('services', async () => await supabase!.from('services').select('*').order('id', { ascending: true }), []);
-};
-
-export const upsertService = async (service: Partial<Service>) => {
-  const updated = localDB.upsertItem('services', service);
+export const getServices = () => handleRequest('services', () => supabase!.from('services').select('*'), []);
+export const upsertService = async (data: any) => {
+  const local = localDB.upsertItem('services', data);
   if (!supabase) return { success: true, cloud: false };
-  const { error } = await supabase.from('services').upsert(updated);
-  return { success: true, cloud: !error };
+  const { error } = await supabase.from('services').upsert(local);
+  return { success: true, cloud: !error, error: error?.message };
 };
 
+// Add deleteService to fix error in AdminPanel.tsx
 export const deleteService = async (id: string) => {
   localDB.removeItem('services', id);
-  if (!supabase) return;
-  await supabase.from('services').delete().eq('id', id);
+  if (supabase) await supabase.from('services').delete().eq('id', id);
 };
 
-export const getPortfolio = async (): Promise<Project[]> => {
-  // Fix: Order by ID if created_at is missing, but usually table has created_at
-  return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*'), []);
-};
+export const getPortfolio = () => handleRequest('portfolio', () => supabase!.from('portfolio').select('*').order('id', { ascending: false }), []);
 
 export const upsertProject = async (project: Partial<Project>) => {
+  // 1. Save to Local Storage first
   const localItem = localDB.upsertItem('portfolio', project);
-  if (!supabase) return { success: true, cloud: false };
   
+  if (!supabase) return { success: true, cloud: false, error: "Supabase not connected" };
+
   try {
-    // We try to upsert. If successful, we refresh to get proper IDs.
+    // 2. Prepare data for Supabase
+    // If it's a new local item, we let Supabase generate its own ID if possible, 
+    // but our SQL uses TEXT ID, so we can send the local one safely.
     const { data, error } = await supabase.from('portfolio').upsert(localItem).select();
     
     if (error) {
-      console.error("Cloud Save Failed:", error.message);
       return { success: true, cloud: false, error: error.message };
     }
 
-    // If sync succeeded, update localDB with the server version (removes local_ prefix)
+    // 3. If synced, update local storage with the confirmed server data
     if (data && data[0]) {
-      localDB.removeItem('portfolio', localItem.id!); // Remove temp local item
-      localDB.upsertItem('portfolio', data[0]); // Add proper server item
+      localDB.removeItem('portfolio', localItem.id!);
+      localDB.upsertItem('portfolio', data[0]);
     }
 
     return { success: true, cloud: true };
-  } catch (err) {
-    return { success: true, cloud: false };
+  } catch (err: any) {
+    return { success: true, cloud: false, error: err.message };
   }
 };
 
 export const deleteProject = async (id: string) => {
   localDB.removeItem('portfolio', id);
-  if (!supabase) return;
-  await supabase.from('portfolio').delete().eq('id', id);
+  if (supabase) await supabase.from('portfolio').delete().eq('id', id);
 };
 
-export const getTestimonials = async (): Promise<Testimonial[]> => {
-  return handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*'), []);
-};
-
-export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
-  const updated = localDB.upsertItem('testimonials', testimonial);
+export const getFAQs = () => handleRequest('faqs', () => supabase!.from('faqs').select('*'), []);
+export const upsertFAQ = async (data: any) => {
+  const local = localDB.upsertItem('faqs', data);
   if (!supabase) return { success: true, cloud: false };
-  const { error } = await supabase.from('testimonials').upsert(updated);
-  return { success: true, cloud: !error };
+  const { error } = await supabase.from('faqs').upsert(local);
+  return { success: true, cloud: !error, error: error?.message };
 };
 
-export const deleteTestimonial = async (id: string) => {
-  localDB.removeItem('testimonials', id);
-  if (!supabase) return;
-  await supabase.from('testimonials').delete().eq('id', id);
-};
-
-export const getFAQs = async (): Promise<FAQItem[]> => {
-  return handleRequest('faqs', async () => await supabase!.from('faqs').select('*'), []);
-};
-
-export const upsertFAQ = async (faq: Partial<FAQItem>) => {
-  const updated = localDB.upsertItem('faqs', faq);
-  if (!supabase) return { success: true, cloud: false };
-  const { error } = await supabase.from('faqs').upsert(updated);
-  return { success: true, cloud: !error };
-};
-
+// Add deleteFAQ to fix error in AdminPanel.tsx
 export const deleteFAQ = async (id: string) => {
   localDB.removeItem('faqs', id);
-  if (!supabase) return;
-  await supabase.from('faqs').delete().eq('id', id);
+  if (supabase) await supabase.from('faqs').delete().eq('id', id);
 };
 
-export const getInquiries = async (): Promise<Inquiry[]> => {
-  return handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*'), []);
+export const getTestimonials = () => handleRequest('testimonials', () => supabase!.from('testimonials').select('*'), []);
+export const upsertTestimonial = async (data: any) => {
+  const local = localDB.upsertItem('testimonials', data);
+  if (!supabase) return { success: true, cloud: false };
+  const { error } = await supabase.from('testimonials').upsert(local);
+  return { success: true, cloud: !error, error: error?.message };
 };
 
+// Add deleteTestimonial to fix error in AdminPanel.tsx
+export const deleteTestimonial = async (id: string) => {
+  localDB.removeItem('testimonials', id);
+  if (supabase) await supabase.from('testimonials').delete().eq('id', id);
+};
+
+export const getInquiries = () => handleRequest('inquiries', () => supabase!.from('inquiries').select('*'), []);
 export const deleteInquiry = async (id: string) => {
   localDB.removeItem('inquiries', id);
-  if (!supabase) return;
-  await supabase.from('inquiries').delete().eq('id', id);
+  if (supabase) await supabase.from('inquiries').delete().eq('id', id);
 };
 
 export const submitInquiry = async (formData: any) => {
   if (!supabase) return false;
-  const inquiry = {
-    name: formData.name,
-    email: formData.email,
-    phone: formData.phone || '',
-    message: formData.message,
-    plan: formData.plan || 'General Inquiry'
-  };
-  try {
-    const { error } = await supabase.from('inquiries').insert([inquiry]);
-    return !error;
-  } catch (err) {
-    return false;
-  }
+  const { error } = await supabase.from('inquiries').insert([formData]);
+  return !error;
 };
 
 export const adminLogin = async (email: string, pass: string) => {
@@ -218,11 +175,5 @@ export const adminLogin = async (email: string, pass: string) => {
   }
   return { success: false };
 };
-
-export const isAdminLoggedIn = () => {
-  return !!localStorage.getItem('admin_token');
-};
-
-export const logoutAdmin = () => {
-  localStorage.removeItem('admin_token');
-};
+export const isAdminLoggedIn = () => !!localStorage.getItem('admin_token');
+export const logoutAdmin = () => localStorage.removeItem('admin_token');
