@@ -123,6 +123,26 @@ export const PORTFOLIO_ITEMS: Project[] = [
     status: 'published',
     project_type: 'demo'
   },
+  {
+    id: '3',
+    title: 'LArtiste',
+    category: 'Coffee Cafe',
+    image: 'https://i.postimg.cc/7YJLftGp/a-iss-image-ko-4k-or-h-(1).jpg',
+    description: 'A high-end cafe management landing page with a modern UI and food ordering simulation.',
+    link: 'https://artiste-cafe.netlify.app/',
+    status: 'published',
+    project_type: 'demo'
+  },
+  {
+    id: '4',
+    title: 'ApexFinance',
+    category: 'Stock Market Institut',
+    image: 'https://i.postimg.cc/1RksWLK5/1770310607554-019c2ebb-16e6-7d54-b454-e09efd96cd71.jpg',
+    description: 'Ultra-sleek, fast-loading stock market website with stunning dark UI, smooth hover animations, vibrant colors, and mobile-friendly design—eye-catchy yet professional!',
+    link: 'https://stock-market-institute.netlify.app/',
+    status: 'published',
+    project_type: 'demo'
+  },
 ];
 
 export const TESTIMONIALS: Testimonial[] = [
