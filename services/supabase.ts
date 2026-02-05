@@ -49,6 +49,7 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
     const mergedMap = new Map();
     serverItems.forEach((item: any) => mergedMap.set(item.id, item));
     localItems.forEach((item: any) => {
+      // Only keep local items that haven't been synced yet
       if (typeof item.id === 'string' && item.id.startsWith('local_')) {
         const alreadyExists = serverItems.some(si => si.title === item.title);
         if (!alreadyExists) mergedMap.set(item.id, item);
@@ -87,33 +88,42 @@ export const upsertService = async (data: any) => {
   return { success: true, cloud: !error, error: error?.message };
 };
 
-// Add deleteService to fix error in AdminPanel.tsx
 export const deleteService = async (id: string) => {
   localDB.removeItem('services', id);
   if (supabase) await supabase.from('services').delete().eq('id', id);
 };
 
-export const getPortfolio = () => handleRequest('portfolio', () => supabase!.from('portfolio').select('*').order('id', { ascending: false }), []);
+export const getPortfolio = () => handleRequest('portfolio', () => supabase!.from('portfolio').select('*').order('created_at', { ascending: false }), []);
 
 export const upsertProject = async (project: Partial<Project>) => {
-  // 1. Save to Local Storage first
+  // 1. First, save to local storage with a temporary 'local_' ID if it's new
   const localItem = localDB.upsertItem('portfolio', project);
   
   if (!supabase) return { success: true, cloud: false, error: "Supabase not connected" };
 
   try {
-    // 2. Prepare data for Supabase
-    // If it's a new local item, we let Supabase generate its own ID if possible, 
-    // but our SQL uses TEXT ID, so we can send the local one safely.
-    const { data, error } = await supabase.from('portfolio').upsert(localItem).select();
+    const isNewLocal = localItem.id.startsWith('local_');
+    const projectToSync = { ...localItem };
+    
+    // If it's a new project, we want a clean ID in the cloud (not starting with 'local_')
+    if (isNewLocal) {
+      projectToSync.id = `id_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    }
+
+    // 2. Upsert to Supabase with the clean ID
+    const { data, error } = await supabase.from('portfolio').upsert(projectToSync).select();
     
     if (error) {
       return { success: true, cloud: false, error: error.message };
     }
 
-    // 3. If synced, update local storage with the confirmed server data
+    // 3. If successful, update our local copy to use the permanent ID from the server
     if (data && data[0]) {
-      localDB.removeItem('portfolio', localItem.id!);
+      // Remove the old local-only entry
+      if (isNewLocal) {
+        localDB.removeItem('portfolio', localItem.id);
+      }
+      // Add/Update the server-confirmed entry
       localDB.upsertItem('portfolio', data[0]);
     }
 
@@ -136,7 +146,6 @@ export const upsertFAQ = async (data: any) => {
   return { success: true, cloud: !error, error: error?.message };
 };
 
-// Add deleteFAQ to fix error in AdminPanel.tsx
 export const deleteFAQ = async (id: string) => {
   localDB.removeItem('faqs', id);
   if (supabase) await supabase.from('faqs').delete().eq('id', id);
@@ -150,7 +159,6 @@ export const upsertTestimonial = async (data: any) => {
   return { success: true, cloud: !error, error: error?.message };
 };
 
-// Add deleteTestimonial to fix error in AdminPanel.tsx
 export const deleteTestimonial = async (id: string) => {
   localDB.removeItem('testimonials', id);
   if (supabase) await supabase.from('testimonials').delete().eq('id', id);
