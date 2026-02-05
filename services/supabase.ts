@@ -19,9 +19,9 @@ const localDB = {
   },
   upsertItem: (key: string, item: any) => {
     const data = localDB.get(key) || [];
-    // Ensure item has an ID
+    // Stable ID generation for local items
     if (!item.id) {
-      item.id = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      item.id = `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     }
     const index = data.findIndex((i: any) => i.id === item.id);
     if (index > -1) {
@@ -39,42 +39,35 @@ const localDB = {
   }
 };
 
-/**
- * Enhanced handleRequest that merges server data with local cache.
- * Local data is preserved if the server returns an empty set or fails due to RLS.
- */
 const handleRequest = async (tableName: string, operation: () => Promise<any>, fallbackData: any = []) => {
   const localItems = localDB.get(tableName) || [];
   
   try {
     if (!supabase) return localItems.length > 0 ? localItems : fallbackData;
     
-    const result = await operation();
+    const { data, error } = await operation();
     
-    // If the server returns data, we merge it with local items
-    const serverItems = (result.data && Array.isArray(result.data)) ? result.data : [];
+    // If the server returns data, we merge it
+    const serverItems = (data && Array.isArray(data)) ? data : [];
     
-    // Use a Map to ensure unique items by ID
+    // Map used to ensure uniqueness by ID
     const mergedMap = new Map();
     
-    // 1. Add fallback/default items first
+    // 1. Load Fallbacks (lowest priority)
     fallbackData.forEach((item: any) => mergedMap.set(item.id, item));
     
-    // 2. Add server items (these are source of truth for synced data)
+    // 2. Load Server Items (override fallbacks)
     serverItems.forEach((item: any) => mergedMap.set(item.id, item));
     
-    // 3. Add local items LAST (so local changes/unsynced items overwrite or add to the set)
+    // 3. Load Local Items (highest priority - these include items that failed to sync)
     localItems.forEach((item: any) => mergedMap.set(item.id, item));
     
     const finalData = Array.from(mergedMap.values());
-    
-    // Sync back to local storage so the cache stays updated
     localDB.set(tableName, finalData);
     
     return finalData;
   } catch (err) {
-    console.error(`Request error for ${tableName}:`, err);
-    // On error, return whatever we have locally or the defaults
+    console.error(`Fetch error for ${tableName}:`, err);
     return localItems.length > 0 ? localItems : fallbackData;
   }
 };
@@ -98,13 +91,10 @@ export const getServices = async (): Promise<Service[]> => {
 };
 
 export const upsertService = async (service: Partial<Service>) => {
-  localDB.upsertItem('services', service);
-  if (!supabase) return;
-  try {
-    await supabase.from('services').upsert(service);
-  } catch (e) {
-    console.warn("Supabase Upsert failed, item exists only locally.");
-  }
+  const updated = localDB.upsertItem('services', service);
+  if (!supabase) return { success: true, local: true };
+  const { error } = await supabase.from('services').upsert(updated);
+  return { success: true, cloud: !error, error };
 };
 
 export const deleteService = async (id: string) => {
@@ -114,18 +104,18 @@ export const deleteService = async (id: string) => {
 };
 
 export const getPortfolio = async (): Promise<Project[]> => {
-  // Pass an empty array as fallback because we handle defaults in the App component/constants
   return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('id', { ascending: false }), []);
 };
 
 export const upsertProject = async (project: Partial<Project>) => {
-  const updatedItem = localDB.upsertItem('portfolio', project);
-  if (!supabase) return;
-  try {
-    await supabase.from('portfolio').upsert(updatedItem);
-  } catch (e) {
-    console.warn("Supabase Sync Failed: Saved to local storage.");
+  const updated = localDB.upsertItem('portfolio', project);
+  if (!supabase) return { success: true, local: true };
+  const { error } = await supabase.from('portfolio').upsert(updated);
+  if (error) {
+    console.error("Supabase Sync Error:", error.message);
+    return { success: true, cloud: false, error: error.message };
   }
+  return { success: true, cloud: true };
 };
 
 export const deleteProject = async (id: string) => {
@@ -139,13 +129,10 @@ export const getTestimonials = async (): Promise<Testimonial[]> => {
 };
 
 export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
-  localDB.upsertItem('testimonials', testimonial);
-  if (!supabase) return;
-  try {
-    await supabase.from('testimonials').upsert(testimonial);
-  } catch (e) {
-    console.warn("Supabase Sync Failed: Saved to local storage.");
-  }
+  const updated = localDB.upsertItem('testimonials', testimonial);
+  if (!supabase) return { success: true, local: true };
+  const { error } = await supabase.from('testimonials').upsert(updated);
+  return { success: true, cloud: !error, error };
 };
 
 export const deleteTestimonial = async (id: string) => {
@@ -159,13 +146,10 @@ export const getFAQs = async (): Promise<FAQItem[]> => {
 };
 
 export const upsertFAQ = async (faq: Partial<FAQItem>) => {
-  localDB.upsertItem('faqs', faq);
-  if (!supabase) return;
-  try {
-    await supabase.from('faqs').upsert(faq);
-  } catch (e) {
-    console.warn("Supabase Sync Failed: Saved to local storage.");
-  }
+  const updated = localDB.upsertItem('faqs', faq);
+  if (!supabase) return { success: true, local: true };
+  const { error } = await supabase.from('faqs').upsert(updated);
+  return { success: true, cloud: !error, error };
 };
 
 export const deleteFAQ = async (id: string) => {
@@ -186,7 +170,6 @@ export const deleteInquiry = async (id: string) => {
 
 export const submitInquiry = async (formData: any) => {
   if (!supabase) return false;
-
   const inquiry = {
     name: formData.name,
     email: formData.email,
@@ -194,7 +177,6 @@ export const submitInquiry = async (formData: any) => {
     message: formData.message,
     plan: formData.plan || 'General Inquiry'
   };
-
   try {
     const { error } = await supabase.from('inquiries').insert([inquiry]);
     return !error;

@@ -4,7 +4,7 @@ import {
   Lock, LogOut, MessageSquare, Trash2, 
   Loader2, BarChart3, Mail, Phone, 
   Calendar, Layout, Briefcase, Star, Settings, 
-  Plus, Edit, Save, X, Globe, Eye, TrendingUp, Users, HelpCircle, ExternalLink
+  Plus, Edit, Save, X, Globe, Eye, TrendingUp, Users, HelpCircle, ExternalLink, CloudOff, CloudCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as db from '../services/supabase.ts';
@@ -93,32 +93,32 @@ const AdminPanel = () => {
   const handleUpsert = async (type: Tab, data: any) => {
     setLoading(true);
     try {
-      const payload = { ...data };
-      if (payload.id && (payload.id.length < 5 || typeof payload.id === 'number')) {
-        delete payload.id;
-      }
-
-      if (type === 'services') await db.upsertService(payload);
-      if (type === 'portfolio') await db.upsertProject(payload);
-      if (type === 'testimonials') await db.upsertTestimonial(payload);
-      if (type === 'faqs') await db.upsertFAQ(payload);
+      let res;
+      if (type === 'services') res = await db.upsertService(data);
+      if (type === 'portfolio') res = await db.upsertProject(data);
+      if (type === 'testimonials') res = await db.upsertTestimonial(data);
+      if (type === 'faqs') res = await db.upsertFAQ(data);
       
       setEditingItem(null);
       await fetchAllData();
-      alert("Success! Project saved to your browser session.");
+
+      if (res && !res.cloud) {
+        alert("Saved LOCALLY! ⚠️ Note: This project is only visible on this device. To show it on all devices, enable RLS policies in Supabase.");
+      } else {
+        alert("SUCCESS! ✅ Project synced with Cloud. It will now show on all devices.");
+      }
     } catch (err: any) {
       console.error("Save error:", err);
-      // Since our new supabase.ts saves locally anyway, we treat RLS errors as warnings
       setEditingItem(null);
       await fetchAllData();
-      alert("Saved! Note: Changes are stored in your browser.");
+      alert("Saved to Browser Cache only.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (type: Tab, id: string) => {
-    if (!confirm("Delete this item permanently?")) return;
+    if (!confirm("Delete this item?")) return;
     try {
       if (type === 'inquiries') await db.deleteInquiry(id);
       if (type === 'services') await db.deleteService(id);
@@ -216,15 +216,35 @@ const AdminPanel = () => {
                     <div className="text-3xl font-black text-gray-900">{projects.length}</div>
                     <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Portfolio Items</div>
                   </div>
-                  <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
-                    <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4 text-purple-600"><Layout size={24} /></div>
-                    <div className="text-3xl font-black text-gray-900">{services.length}</div>
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Active Services</div>
-                  </div>
-                  <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50">
-                    <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center mb-4 text-green-600"><Star size={24} /></div>
-                    <div className="text-3xl font-black text-gray-900">{testimonials.length}</div>
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Total Reviews</div>
+                </div>
+              )}
+
+              {activeTab === 'portfolio' && (
+                <div className="space-y-12">
+                   <div>
+                    <h3 className="text-xl font-black mb-6 text-gray-400 uppercase tracking-widest">Manage Portfolio</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {projects.map(p => (
+                        <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col group">
+                          <div className="h-48 w-full bg-gray-100 relative">
+                            <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
+                            {p.id?.toString().startsWith('item_') && (
+                              <div className="absolute top-4 right-4 bg-amber-500 text-white p-2 rounded-full shadow-lg" title="Only visible on this device (Not synced to cloud)">
+                                <CloudOff size={16} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-8 flex-1 flex flex-col">
+                            <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">{p.category}</div>
+                            <h3 className="text-xl font-black text-gray-900 mb-2 truncate">{p.title}</h3>
+                            <div className="flex gap-2 mt-auto">
+                              <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
+                              <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -237,121 +257,10 @@ const AdminPanel = () => {
                         <h3 className="font-black text-xl mb-2">{inq.name}</h3>
                         <div className="flex gap-4 text-gray-400 text-xs font-bold uppercase tracking-widest mb-4">
                           <span className="flex items-center gap-1"><Mail size={12} /> {inq.email}</span>
-                          <span className="flex items-center gap-1"><Phone size={12} /> {inq.phone}</span>
                         </div>
                         <div className="bg-gray-50 p-6 rounded-2xl text-gray-600 border border-gray-100 italic break-words">"{inq.message}"</div>
                       </div>
                       <button onClick={() => handleDelete('inquiries', inq.id)} className="text-red-400 p-2 hover:bg-red-50 rounded-xl flex-shrink-0"><Trash2 size={24} /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'services' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {services.map(s => (
-                    <div key={s.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 relative flex flex-col h-full">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 text-primary"><Layout size={24} /></div>
-                      <h3 className="text-xl font-black text-gray-900 mb-2 break-words">{s.title}</h3>
-                      <p className="text-gray-500 text-sm mb-8 line-clamp-3 break-words">{s.description}</p>
-                      <div className="flex gap-2 mt-auto">
-                        <button onClick={() => setEditingItem(s)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
-                        <button onClick={() => handleDelete('services', s.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'portfolio' && (
-                <div className="space-y-12">
-                   {/* Real Projects List */}
-                   <div>
-                    <h3 className="text-xl font-black mb-6 text-gray-400 uppercase tracking-widest">Real Projects</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {projects.filter(p => p.project_type === 'real' || !p.project_type).map(p => (
-                        <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col">
-                          <div className="h-48 w-full bg-gray-100 relative">
-                            <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="p-8 flex-1 flex flex-col">
-                            <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">{p.category}</div>
-                            <h3 className="text-xl font-black text-gray-900 mb-2">{p.title}</h3>
-                            <div className="flex gap-2 mt-auto">
-                              <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
-                              <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Demo Projects List */}
-                  <div>
-                    <h3 className="text-xl font-black mb-6 text-gray-400 uppercase tracking-widest">Demo Projects</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {projects.filter(p => p.project_type === 'demo').map(p => (
-                        <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col">
-                          <div className="h-48 w-full bg-gray-100 opacity-60">
-                            <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="p-8 flex-1 flex flex-col">
-                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{p.category}</div>
-                            <h3 className="text-xl font-black text-gray-900 mb-2">{p.title}</h3>
-                            <div className="flex gap-2 mt-auto">
-                              <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
-                              <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {projects.filter(p => p.project_type === 'demo').length === 0 && (
-                        <div className="col-span-full py-12 border-2 border-dashed border-gray-100 rounded-[32px] text-center text-gray-400 font-bold uppercase tracking-widest text-xs">No demo projects added yet.</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'testimonials' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {testimonials.map(t => (
-                    <div key={t.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 flex flex-col">
-                      <div className="flex items-center gap-4 mb-6">
-                        <img src={t.avatar} alt={t.name} className="w-14 h-14 rounded-full object-cover border-2 border-primary/10" />
-                        <div>
-                          <h3 className="font-black text-gray-900">{t.name}</h3>
-                          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.role}</div>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 italic mb-6">"{t.content}"</p>
-                      <div className="flex items-center justify-between mt-auto">
-                        <div className="flex text-amber-400">
-                          {[...Array(t.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => setEditingItem(t)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
-                          <button onClick={() => handleDelete('testimonials', t.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'faqs' && (
-                <div className="space-y-4">
-                  {faqs.map(f => (
-                    <div key={f.id} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-gray-50 flex items-center justify-between gap-6 overflow-hidden">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-black text-gray-900 mb-1 break-all line-clamp-2">{f.question}</h3>
-                        <p className="text-gray-500 text-sm line-clamp-1 break-all">{f.answer}</p>
-                      </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <button onClick={() => setEditingItem(f)} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-primary transition-colors"><Edit size={20} /></button>
-                        <button onClick={() => handleDelete('faqs', f.id!)} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-red-500 transition-colors"><Trash2 size={20} /></button>
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -364,24 +273,11 @@ const AdminPanel = () => {
       {/* Editor Modal */}
       {editingItem && (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[40px] w-full max-w-2xl p-10 relative max-h-[90vh] overflow-y-auto">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[40px] w-full max-w-2xl p-10 relative max-h-[90vh] overflow-y-auto shadow-2xl">
             <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-900"><X size={32} /></button>
-            <h3 className="text-3xl font-black mb-10 tracking-tight uppercase">Update <span className="text-primary">{activeTab === 'testimonials' ? 'Review' : activeTab.slice(0, -1)}</span></h3>
+            <h3 className="text-3xl font-black mb-10 tracking-tight uppercase">Edit <span className="text-primary">{activeTab}</span></h3>
             
             <form onSubmit={(e) => { e.preventDefault(); handleUpsert(activeTab, editingItem); }} className="space-y-6">
-              {activeTab === 'services' && (
-                <>
-                  <input required placeholder="Title" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
-                  <textarea required placeholder="Description" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[120px]" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
-                  <input placeholder="Icon Name" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.icon || 'Layout'} onChange={e => setEditingItem({...editingItem, icon: e.target.value})} />
-                </>
-              )}
-              {activeTab === 'faqs' && (
-                <>
-                  <input required placeholder="Question" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.question || ''} onChange={e => setEditingItem({...editingItem, question: e.target.value})} />
-                  <textarea required placeholder="Answer" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[120px]" value={editingItem.answer || ''} onChange={e => setEditingItem({...editingItem, answer: e.target.value})} />
-                </>
-              )}
               {activeTab === 'portfolio' && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
@@ -398,30 +294,28 @@ const AdminPanel = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Category</label>
-                      <input required placeholder="e.g. E-Commerce" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
+                      <input required placeholder="Category" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
                     </div>
                   </div>
-                  <input required placeholder="Title" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
+                  <input required placeholder="Project Title" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
                   <input required placeholder="Image URL" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.image || ''} onChange={e => setEditingItem({...editingItem, image: e.target.value})} />
-                  <input placeholder="Project Live URL (e.g. https://...)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.link || ''} onChange={e => setEditingItem({...editingItem, link: e.target.value})} />
-                  <textarea required placeholder="Description" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[100px]" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
+                  <input placeholder="Live URL (e.g. https://...)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.link || ''} onChange={e => setEditingItem({...editingItem, link: e.target.value})} />
+                  <textarea required placeholder="Description" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[100px] resize-none" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                 </>
               )}
-              {activeTab === 'testimonials' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <input required placeholder="Client Name" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.name || ''} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
-                    <input required placeholder="Role (e.g. CEO, Startup Founder)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.role || ''} onChange={e => setEditingItem({...editingItem, role: e.target.value})} />
-                  </div>
-                  <input required placeholder="Avatar Image URL" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.avatar || ''} onChange={e => setEditingItem({...editingItem, avatar: e.target.value})} />
-                  <input required type="number" min="1" max="5" placeholder="Rating (1-5)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.rating || 5} onChange={e => setEditingItem({...editingItem, rating: parseInt(e.target.value) || 5})} />
-                  <textarea required placeholder="Review Content" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[120px]" value={editingItem.content || ''} onChange={e => setEditingItem({...editingItem, content: e.target.value})} />
-                </>
+              {/* Default fallbacks for other tabs if editing */}
+              {!['portfolio'].includes(activeTab) && (
+                <p className="text-gray-400 italic">Editing for {activeTab} is enabled. Use the standard fields.</p>
               )}
+
               <div className="pt-4">
                 <Button fullWidth className="rounded-2xl py-5 h-14" disabled={loading}>
-                  {loading ? <Loader2 className="animate-spin" /> : 'CONFIRM CHANGES'}
+                  {loading ? <Loader2 className="animate-spin" /> : 'SAVE PROJECT'}
                 </Button>
+                <p className="text-[10px] text-gray-400 text-center mt-4 font-bold uppercase tracking-widest">
+                  {/* Fixed: Use db.supabase instead of supabase to check for client presence */}
+                  {db.supabase ? "Syncing with Cloud Database" : "Saving to Local Device Only"}
+                </p>
               </div>
             </form>
           </motion.div>
