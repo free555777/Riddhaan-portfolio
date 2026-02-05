@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Lock, LogOut, MessageSquare, Trash2, 
   Loader2, BarChart3, Mail, Phone, 
-  Calendar, Layout, Briefcase, Star, Settings, 
+  Layout, Briefcase, Star, Settings, 
   Plus, Edit, Save, X, Globe, Eye, TrendingUp, Users, HelpCircle, ExternalLink, CloudOff, CloudCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -57,7 +57,7 @@ const AdminPanel = () => {
         db.getSiteSettings()
       ]);
       
-      setInquiries(inq);
+      setInquiries(inq || []);
       setServices(serv.length > 0 ? serv : DEFAULT_SERVICES);
       setProjects(port.length > 0 ? port : DEFAULT_PORTFOLIO);
       setTestimonials(test.length > 0 ? test : DEFAULT_TESTIMONIALS);
@@ -98,14 +98,18 @@ const AdminPanel = () => {
       if (type === 'portfolio') res = await db.upsertProject(data);
       if (type === 'testimonials') res = await db.upsertTestimonial(data);
       if (type === 'faqs') res = await db.upsertFAQ(data);
+      if (type === 'settings') {
+        await db.updateSiteSettings(data);
+        res = { cloud: true };
+      }
       
       setEditingItem(null);
       await fetchAllData();
 
       if (res && !res.cloud) {
-        alert("Saved LOCALLY! ⚠️ Note: This project is only visible on this device. To show it on all devices, enable RLS policies in Supabase.");
+        alert("Saved LOCALLY! ⚠️ Data is in this browser only. Enable RLS in Supabase to sync across devices.");
       } else {
-        alert("SUCCESS! ✅ Project synced with Cloud. It will now show on all devices.");
+        alert("SUCCESS! ✅ Data synced with Cloud.");
       }
     } catch (err: any) {
       console.error("Save error:", err);
@@ -219,33 +223,110 @@ const AdminPanel = () => {
                 </div>
               )}
 
-              {activeTab === 'portfolio' && (
-                <div className="space-y-12">
-                   <div>
-                    <h3 className="text-xl font-black mb-6 text-gray-400 uppercase tracking-widest">Manage Portfolio</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {projects.map(p => (
-                        <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col group">
-                          <div className="h-48 w-full bg-gray-100 relative">
-                            <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
-                            {p.id?.toString().startsWith('item_') && (
-                              <div className="absolute top-4 right-4 bg-amber-500 text-white p-2 rounded-full shadow-lg" title="Only visible on this device (Not synced to cloud)">
-                                <CloudOff size={16} />
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-8 flex-1 flex flex-col">
-                            <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">{p.category}</div>
-                            <h3 className="text-xl font-black text-gray-900 mb-2 truncate">{p.title}</h3>
-                            <div className="flex gap-2 mt-auto">
-                              <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
-                              <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+              {activeTab === 'services' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {services.map(s => (
+                    <div key={s.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 flex flex-col group">
+                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                        <Layout size={24} />
+                      </div>
+                      <h3 className="text-xl font-black text-gray-900 mb-2 truncate">{s.title}</h3>
+                      <p className="text-gray-500 text-sm mb-6 line-clamp-3">{s.description}</p>
+                      <div className="flex gap-2 mt-auto">
+                        <button onClick={() => setEditingItem(s)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
+                        <button onClick={() => handleDelete('services', s.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
+                      </div>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'portfolio' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map(p => (
+                    <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col group">
+                      <div className="h-48 w-full bg-gray-100 relative">
+                        <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
+                        {p.id?.toString().startsWith('item_') && (
+                          <div className="absolute top-4 right-4 bg-amber-500 text-white p-2 rounded-full shadow-lg" title="Only visible on this device">
+                            <CloudOff size={16} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-8 flex-1 flex flex-col">
+                        <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">{p.category}</div>
+                        <h3 className="text-xl font-black text-gray-900 mb-2 truncate">{p.title}</h3>
+                        <div className="flex gap-2 mt-auto">
+                          <button onClick={() => setEditingItem(p)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
+                          <button onClick={() => handleDelete('portfolio', p.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'testimonials' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {testimonials.map(t => (
+                    <div key={t.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 flex flex-col">
+                      <div className="flex items-center gap-4 mb-6">
+                        <img src={t.avatar} alt={t.name} className="w-14 h-14 rounded-full object-cover" />
+                        <div>
+                          <h4 className="font-black text-gray-900">{t.name}</h4>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t.role}</p>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 italic mb-6">"{t.content}"</p>
+                      <div className="flex gap-2 mt-auto">
+                        <button onClick={() => setEditingItem(t)} className="p-3 bg-blue-50 text-primary rounded-xl hover:bg-primary hover:text-white transition-all"><Edit size={16} /></button>
+                        <button onClick={() => handleDelete('testimonials', t.id!)} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'faqs' && (
+                <div className="space-y-4">
+                  {faqs.map(f => (
+                    <div key={f.id} className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-50 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-black text-gray-900 mb-1">{f.question}</h4>
+                        <p className="text-gray-500 text-sm line-clamp-1">{f.answer}</p>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <button onClick={() => setEditingItem(f)} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-primary transition-all"><Edit size={16} /></button>
+                        <button onClick={() => handleDelete('faqs', f.id!)} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:text-red-500 transition-all"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'settings' && settings && (
+                <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-50">
+                  <form onSubmit={(e) => { e.preventDefault(); handleUpsert('settings', settings); }} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <label className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">Site Name</label>
+                      <input className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-primary" value={settings.site_name} onChange={e => setSettings({...settings, site_name: e.target.value})} />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">Tagline</label>
+                      <input className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-primary" value={settings.tagline} onChange={e => setSettings({...settings, tagline: e.target.value})} />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">Contact Email</label>
+                      <input className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-primary" value={settings.contact_email} onChange={e => setSettings({...settings, contact_email: e.target.value})} />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-xs font-black uppercase text-gray-400 tracking-widest ml-2">WhatsApp Number</label>
+                      <input className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-primary" value={settings.whatsapp_number} onChange={e => setSettings({...settings, whatsapp_number: e.target.value})} />
+                    </div>
+                    <div className="md:col-span-2 pt-6">
+                      <Button fullWidth className="rounded-2xl h-14">SAVE ALL SETTINGS</Button>
+                    </div>
+                  </form>
                 </div>
               )}
 
@@ -275,46 +356,58 @@ const AdminPanel = () => {
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[40px] w-full max-w-2xl p-10 relative max-h-[90vh] overflow-y-auto shadow-2xl">
             <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-900"><X size={32} /></button>
-            <h3 className="text-3xl font-black mb-10 tracking-tight uppercase">Edit <span className="text-primary">{activeTab}</span></h3>
+            <h3 className="text-3xl font-black mb-10 tracking-tight uppercase">Update <span className="text-primary">{activeTab.slice(0, -1)}</span></h3>
             
             <form onSubmit={(e) => { e.preventDefault(); handleUpsert(activeTab, editingItem); }} className="space-y-6">
+              {activeTab === 'services' && (
+                <>
+                  <input required placeholder="Service Title" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
+                  <textarea required placeholder="Service Description" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[120px]" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
+                  <input placeholder="Icon (Layout, Zap, Search, etc.)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.icon || 'Layout'} onChange={e => setEditingItem({...editingItem, icon: e.target.value})} />
+                </>
+              )}
+
               {activeTab === 'portfolio' && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Project Type</label>
-                      <select 
-                        className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold"
-                        value={editingItem.project_type || 'real'}
-                        onChange={e => setEditingItem({...editingItem, project_type: e.target.value as 'real' | 'demo'})}
-                      >
-                        <option value="real">Real Project</option>
-                        <option value="demo">Demo Project</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Category</label>
-                      <input required placeholder="Category" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
-                    </div>
+                    <select className="p-4 bg-gray-50 rounded-2xl outline-none font-bold" value={editingItem.project_type || 'real'} onChange={e => setEditingItem({...editingItem, project_type: e.target.value as 'real' | 'demo'})}>
+                      <option value="real">Real Project</option>
+                      <option value="demo">Demo Project</option>
+                    </select>
+                    <input required placeholder="Category" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
                   </div>
                   <input required placeholder="Project Title" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
                   <input required placeholder="Image URL" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.image || ''} onChange={e => setEditingItem({...editingItem, image: e.target.value})} />
-                  <input placeholder="Live URL (e.g. https://...)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.link || ''} onChange={e => setEditingItem({...editingItem, link: e.target.value})} />
-                  <textarea required placeholder="Description" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[100px] resize-none" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
+                  <input placeholder="Live Link" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.link || ''} onChange={e => setEditingItem({...editingItem, link: e.target.value})} />
+                  <textarea required placeholder="Project Description" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[100px]" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                 </>
               )}
-              {/* Default fallbacks for other tabs if editing */}
-              {!['portfolio'].includes(activeTab) && (
-                <p className="text-gray-400 italic">Editing for {activeTab} is enabled. Use the standard fields.</p>
+
+              {activeTab === 'testimonials' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input required placeholder="Client Name" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.name || ''} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
+                    <input required placeholder="Client Role" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.role || ''} onChange={e => setEditingItem({...editingItem, role: e.target.value})} />
+                  </div>
+                  <input required placeholder="Avatar Image URL" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.avatar || ''} onChange={e => setEditingItem({...editingItem, avatar: e.target.value})} />
+                  <input type="number" min="1" max="5" placeholder="Rating" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.rating || 5} onChange={e => setEditingItem({...editingItem, rating: parseInt(e.target.value)})} />
+                  <textarea required placeholder="Testimonial Content" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[120px]" value={editingItem.content || ''} onChange={e => setEditingItem({...editingItem, content: e.target.value})} />
+                </>
+              )}
+
+              {activeTab === 'faqs' && (
+                <>
+                  <input required placeholder="FAQ Question" className="w-full p-4 bg-gray-50 rounded-2xl outline-none" value={editingItem.question || ''} onChange={e => setEditingItem({...editingItem, question: e.target.value})} />
+                  <textarea required placeholder="FAQ Answer" className="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[120px]" value={editingItem.answer || ''} onChange={e => setEditingItem({...editingItem, answer: e.target.value})} />
+                </>
               )}
 
               <div className="pt-4">
                 <Button fullWidth className="rounded-2xl py-5 h-14" disabled={loading}>
-                  {loading ? <Loader2 className="animate-spin" /> : 'SAVE PROJECT'}
+                  {loading ? <Loader2 className="animate-spin" /> : 'CONFIRM SAVE'}
                 </Button>
                 <p className="text-[10px] text-gray-400 text-center mt-4 font-bold uppercase tracking-widest">
-                  {/* Fixed: Use db.supabase instead of supabase to check for client presence */}
-                  {db.supabase ? "Syncing with Cloud Database" : "Saving to Local Device Only"}
+                  {db.supabase ? "Cloud Sync Enabled" : "Offline Mode (Local Only)"}
                 </p>
               </div>
             </form>
