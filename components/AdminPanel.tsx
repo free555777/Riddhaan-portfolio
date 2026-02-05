@@ -73,12 +73,23 @@ const AdminPanel = () => {
     e.preventDefault();
     setSaveLoading(true);
     setError('');
+    
+    // Attempt real login
     const res = await db.adminLogin(email, password);
+    
     if (res.success) {
       setIsLogged(true);
       await fetchAllData();
     } else {
-      setError(res.error || "Invalid Credentials.");
+      // Better error messaging
+      const errMsg = res.error?.toLowerCase();
+      if (errMsg?.includes('invalid login credentials')) {
+        setError("Account not found. Please create the user in Supabase Auth tab.");
+      } else if (errMsg?.includes('email not confirmed')) {
+        setError("Email confirmation required. Disable 'Confirm Email' in Supabase Settings.");
+      } else {
+        setError(res.error || "Login Failed.");
+      }
     }
     setSaveLoading(false);
   };
@@ -100,13 +111,13 @@ const AdminPanel = () => {
       else if (type === 'settings') res = await db.updateSiteSettings(data);
       
       if (res && res.error) {
-        alert(`Error: ${res.error}`);
+        alert(`Cloud Sync Error: ${res.error}`);
       } else {
         setEditingItem(null);
         await fetchAllData();
       }
     } catch (err: any) {
-      alert("Action failed. Check console for details.");
+      alert("Operation failed.");
       console.error(err);
     } finally {
       setSaveLoading(false);
@@ -141,17 +152,28 @@ const AdminPanel = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Account Email</label>
-              <input required type="email" placeholder="email@example.com" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all" value={email} onChange={e => setEmail(e.target.value)} />
+              <input required type="email" placeholder="email@example.com" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all font-bold" value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Secure Password</label>
-              <input required type="password" placeholder="••••••••" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all" value={password} onChange={e => setPassword(e.target.value)} />
+              <input required type="password" placeholder="••••••••" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all font-bold" value={password} onChange={e => setPassword(e.target.value)} />
             </div>
-            {error && <p className="text-red-500 text-[10px] font-black text-center bg-red-50 py-3 rounded-xl border border-red-100 uppercase tracking-widest">{error}</p>}
+            {error && (
+              <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
+                <p className="text-red-500 text-[10px] font-black text-center uppercase tracking-widest leading-relaxed">
+                  {error}
+                </p>
+              </div>
+            )}
             <Button fullWidth disabled={saveLoading} className="rounded-2xl py-4 h-14 mt-4">
               {saveLoading ? <Loader2 className="animate-spin" /> : 'AUTHORIZE SESSION'}
             </Button>
           </form>
+          <div className="mt-8 pt-8 border-t border-gray-50">
+            <p className="text-[9px] text-gray-400 text-center uppercase font-black tracking-widest">
+              Don't have an account? Create one in <br/> Supabase Dashboard > Auth > Users
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -438,7 +460,7 @@ const AdminPanel = () => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Description</label>
-                    <textarea className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-32 outline-none resize-none" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
+                    <textarea className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-32 outline-none resize-none font-bold" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                   </div>
                 </>
               )}
@@ -446,15 +468,15 @@ const AdminPanel = () => {
                 <>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Service Title</label>
-                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
+                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.title || ''} onChange={e => setEditingItem({...editingItem, title: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Detailed Description</label>
-                    <textarea className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-40 outline-none resize-none" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
+                    <textarea className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-40 outline-none resize-none font-bold" value={editingItem.description || ''} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Icon Identifier (Lucide Name)</label>
-                    <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" value={editingItem.icon || 'Zap'} onChange={e => setEditingItem({...editingItem, icon: e.target.value})} />
+                    <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.icon || 'Zap'} onChange={e => setEditingItem({...editingItem, icon: e.target.value})} />
                   </div>
                 </>
               )}
@@ -462,19 +484,19 @@ const AdminPanel = () => {
                 <>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Client Name</label>
-                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" value={editingItem.name || ''} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
+                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.name || ''} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Client Role / Company</label>
-                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" value={editingItem.role || ''} onChange={e => setEditingItem({...editingItem, role: e.target.value})} />
+                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.role || ''} onChange={e => setEditingItem({...editingItem, role: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Avatar Image URL</label>
-                    <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" value={editingItem.avatar || ''} onChange={e => setEditingItem({...editingItem, avatar: e.target.value})} />
+                    <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.avatar || ''} onChange={e => setEditingItem({...editingItem, avatar: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Testimonial Content</label>
-                    <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-32 outline-none resize-none" value={editingItem.content || ''} onChange={e => setEditingItem({...editingItem, content: e.target.value})} />
+                    <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-32 outline-none resize-none font-bold" value={editingItem.content || ''} onChange={e => setEditingItem({...editingItem, content: e.target.value})} />
                   </div>
                 </>
               )}
@@ -482,11 +504,11 @@ const AdminPanel = () => {
                 <>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Common Question</label>
-                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" value={editingItem.question || ''} onChange={e => setEditingItem({...editingItem, question: e.target.value})} />
+                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.question || ''} onChange={e => setEditingItem({...editingItem, question: e.target.value})} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Official Answer</label>
-                    <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-40 outline-none resize-none" value={editingItem.answer || ''} onChange={e => setEditingItem({...editingItem, answer: e.target.value})} />
+                    <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-40 outline-none resize-none font-bold" value={editingItem.answer || ''} onChange={e => setEditingItem({...editingItem, answer: e.target.value})} />
                   </div>
                 </>
               )}
