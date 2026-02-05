@@ -17,20 +17,21 @@ const localDB = {
   set: (key: string, data: any) => {
     localStorage.setItem(`riddhaan_db_${key}`, JSON.stringify(data));
   },
-  // New helper to update an item in a local array
   upsertItem: (key: string, item: any) => {
     const data = localDB.get(key) || [];
+    // Ensure item has an ID
+    if (!item.id) {
+      item.id = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
     const index = data.findIndex((i: any) => i.id === item.id);
     if (index > -1) {
       data[index] = { ...data[index], ...item };
     } else {
-      // If no ID, generate a temporary one
-      if (!item.id) item.id = `local_${Date.now()}`;
       data.unshift(item);
     }
     localDB.set(key, data);
+    return item;
   },
-  // New helper to remove an item from a local array
   removeItem: (key: string, id: string) => {
     const data = localDB.get(key) || [];
     const filtered = data.filter((i: any) => i.id !== id);
@@ -38,22 +39,43 @@ const localDB = {
   }
 };
 
+/**
+ * Enhanced handleRequest that merges server data with local cache.
+ * Local data is preserved if the server returns an empty set or fails due to RLS.
+ */
 const handleRequest = async (tableName: string, operation: () => Promise<any>, fallbackData: any = []) => {
+  const localItems = localDB.get(tableName) || [];
+  
   try {
-    if (!supabase) throw new Error("No Supabase connection");
+    if (!supabase) return localItems.length > 0 ? localItems : fallbackData;
+    
     const result = await operation();
-    if (result.error) {
-      console.error(`Supabase error for ${tableName}:`, result.error);
-      // Always fallback to local storage if there's an error
-      return localDB.get(tableName) || fallbackData;
-    }
-    if (result.data && Array.isArray(result.data)) {
-      localDB.set(tableName, result.data);
-    }
-    return result.data;
+    
+    // If the server returns data, we merge it with local items
+    const serverItems = (result.data && Array.isArray(result.data)) ? result.data : [];
+    
+    // Use a Map to ensure unique items by ID
+    const mergedMap = new Map();
+    
+    // 1. Add fallback/default items first
+    fallbackData.forEach((item: any) => mergedMap.set(item.id, item));
+    
+    // 2. Add server items (these are source of truth for synced data)
+    serverItems.forEach((item: any) => mergedMap.set(item.id, item));
+    
+    // 3. Add local items LAST (so local changes/unsynced items overwrite or add to the set)
+    localItems.forEach((item: any) => mergedMap.set(item.id, item));
+    
+    const finalData = Array.from(mergedMap.values());
+    
+    // Sync back to local storage so the cache stays updated
+    localDB.set(tableName, finalData);
+    
+    return finalData;
   } catch (err) {
-    console.error(`Critical error for ${tableName}:`, err);
-    return localDB.get(tableName) || fallbackData;
+    console.error(`Request error for ${tableName}:`, err);
+    // On error, return whatever we have locally or the defaults
+    return localItems.length > 0 ? localItems : fallbackData;
   }
 };
 
@@ -72,14 +94,17 @@ export const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
 };
 
 export const getServices = async (): Promise<Service[]> => {
-  return handleRequest('services', async () => await supabase!.from('services').select('*').order('id', { ascending: true }));
+  return handleRequest('services', async () => await supabase!.from('services').select('*').order('id', { ascending: true }), []);
 };
 
 export const upsertService = async (service: Partial<Service>) => {
   localDB.upsertItem('services', service);
   if (!supabase) return;
-  const { error } = await supabase.from('services').upsert(service);
-  if (error) console.warn("Supabase Sync Failed (RLS/Auth): Saving locally only.");
+  try {
+    await supabase.from('services').upsert(service);
+  } catch (e) {
+    console.warn("Supabase Upsert failed, item exists only locally.");
+  }
 };
 
 export const deleteService = async (id: string) => {
@@ -89,16 +114,17 @@ export const deleteService = async (id: string) => {
 };
 
 export const getPortfolio = async (): Promise<Project[]> => {
-  return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('id', { ascending: false }));
+  // Pass an empty array as fallback because we handle defaults in the App component/constants
+  return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('id', { ascending: false }), []);
 };
 
 export const upsertProject = async (project: Partial<Project>) => {
-  localDB.upsertItem('portfolio', project);
+  const updatedItem = localDB.upsertItem('portfolio', project);
   if (!supabase) return;
-  const { error } = await supabase.from('portfolio').upsert(project);
-  if (error) {
-    console.warn("Supabase Sync Failed (RLS/Auth): Saving locally only.", error);
-    // We don't throw error here so the UI thinks it succeeded locally
+  try {
+    await supabase.from('portfolio').upsert(updatedItem);
+  } catch (e) {
+    console.warn("Supabase Sync Failed: Saved to local storage.");
   }
 };
 
@@ -109,14 +135,17 @@ export const deleteProject = async (id: string) => {
 };
 
 export const getTestimonials = async (): Promise<Testimonial[]> => {
-  return handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*').order('id', { ascending: false }));
+  return handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*').order('id', { ascending: false }), []);
 };
 
 export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
   localDB.upsertItem('testimonials', testimonial);
   if (!supabase) return;
-  const { error } = await supabase.from('testimonials').upsert(testimonial);
-  if (error) console.warn("Supabase Sync Failed locally only.");
+  try {
+    await supabase.from('testimonials').upsert(testimonial);
+  } catch (e) {
+    console.warn("Supabase Sync Failed: Saved to local storage.");
+  }
 };
 
 export const deleteTestimonial = async (id: string) => {
@@ -126,14 +155,17 @@ export const deleteTestimonial = async (id: string) => {
 };
 
 export const getFAQs = async (): Promise<FAQItem[]> => {
-  return handleRequest('faqs', async () => await supabase!.from('faqs').select('*').order('id', { ascending: true }));
+  return handleRequest('faqs', async () => await supabase!.from('faqs').select('*').order('id', { ascending: true }), []);
 };
 
 export const upsertFAQ = async (faq: Partial<FAQItem>) => {
   localDB.upsertItem('faqs', faq);
   if (!supabase) return;
-  const { error } = await supabase.from('faqs').upsert(faq);
-  if (error) console.warn("Supabase Sync Failed locally only.");
+  try {
+    await supabase.from('faqs').upsert(faq);
+  } catch (e) {
+    console.warn("Supabase Sync Failed: Saved to local storage.");
+  }
 };
 
 export const deleteFAQ = async (id: string) => {
@@ -143,7 +175,7 @@ export const deleteFAQ = async (id: string) => {
 };
 
 export const getInquiries = async (): Promise<Inquiry[]> => {
-  return handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*').order('created_at', { ascending: false }));
+  return handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*').order('created_at', { ascending: false }), []);
 };
 
 export const deleteInquiry = async (id: string) => {
@@ -153,10 +185,7 @@ export const deleteInquiry = async (id: string) => {
 };
 
 export const submitInquiry = async (formData: any) => {
-  if (!supabase) {
-    console.error("Supabase client is not available.");
-    return false;
-  }
+  if (!supabase) return false;
 
   const inquiry = {
     name: formData.name,
@@ -168,13 +197,8 @@ export const submitInquiry = async (formData: any) => {
 
   try {
     const { error } = await supabase.from('inquiries').insert([inquiry]);
-    if (error) {
-      console.error("DB Save Error:", error.message);
-      return false;
-    }
-    return true;
+    return !error;
   } catch (err) {
-    console.error("Network error during submission:", err);
     return false;
   }
 };

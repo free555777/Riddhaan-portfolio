@@ -89,9 +89,7 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
 
   return (
     <section id="home" className="relative min-h-[75vh] md:min-h-[90vh] flex items-center pt-28 md:pt-32 pb-16 md:pb-20 overflow-hidden">
-      {/* PREMIUM MESH GRADIENT BACKGROUND - EXACT IMAGE MATCH COLORS */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 bg-white">
-        {/* Sky Blue Blob (Top-Left Focus) */}
         <motion.div
           animate={{
             x: [-40, 40, -40],
@@ -101,8 +99,6 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -top-[10%] -left-[10%] w-full h-[80%] bg-[#4D88FF] rounded-full blur-[150px] md:blur-[250px] opacity-60"
         />
-        
-        {/* Golden Yellow Blob (Bottom-Right Focus) */}
         <motion.div
           animate={{
             x: [40, -40, 40],
@@ -112,11 +108,7 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 1 }}
           className="absolute -bottom-[20%] -right-[10%] w-full h-[90%] bg-[#FFF6A1] rounded-full blur-[140px] md:blur-[230px] opacity-80"
         />
-
-        {/* Central White Blending Layer for Softness */}
         <div className="absolute inset-0 bg-white/10 backdrop-blur-[10px]"></div>
-
-        {/* Subtle Noise Texture for Quality Feel */}
         <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/p6.png')]"></div>
       </div>
       
@@ -254,7 +246,6 @@ const Services = ({ services }: { services: Service[] }) => (
   </section>
 );
 
-// --- Fix: Using React.FC properly types the component to include common React props like 'key' ---
 const ProjectCard: React.FC<{ item: Project, idx: number }> = ({ item, idx }) => (
   <motion.div
     initial={{ opacity: 0, y: 30 }}
@@ -291,33 +282,37 @@ const Portfolio = ({ items }: { items: Project[] }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader title="Featured Work" subtitle="A selection of high-end projects delivered recently" />
         
-        {/* Real Projects Section */}
         <div className="mb-20">
           <div className="flex items-center gap-4 mb-10">
             <h3 className="text-xl md:text-3xl font-black text-gray-900 tracking-tight">Real Projects</h3>
             <div className="h-px flex-1 bg-gray-100"></div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12">
-            {realProjects.map((item, idx) => (
-              <ProjectCard key={item.id} item={item} idx={idx} />
-            ))}
+            {realProjects.length > 0 ? (
+              realProjects.map((item, idx) => (
+                <ProjectCard key={item.id} item={item} idx={idx} />
+              ))
+            ) : (
+              <p className="col-span-full text-center text-gray-400 py-10 font-bold uppercase tracking-widest text-xs">No real projects found.</p>
+            )}
           </div>
         </div>
 
-        {/* Demo Projects Section */}
-        {demoProjects.length > 0 && (
-          <div>
-            <div className="flex items-center gap-4 mb-10">
-              <h3 className="text-xl md:text-3xl font-black text-gray-500 tracking-tight">Demo & Practice</h3>
-              <div className="h-px flex-1 bg-gray-100"></div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12 opacity-80 hover:opacity-100 transition-opacity">
-              {demoProjects.map((item, idx) => (
-                <ProjectCard key={item.id} item={item} idx={idx} />
-              ))}
-            </div>
+        <div>
+          <div className="flex items-center gap-4 mb-10">
+            <h3 className="text-xl md:text-3xl font-black text-gray-500 tracking-tight">Demo & Practice</h3>
+            <div className="h-px flex-1 bg-gray-100"></div>
           </div>
-        )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12 opacity-80 hover:opacity-100 transition-opacity">
+            {demoProjects.length > 0 ? (
+              demoProjects.map((item, idx) => (
+                <ProjectCard key={item.id} item={item} idx={idx} />
+              ))
+            ) : (
+              <p className="col-span-full text-center text-gray-400 py-10 font-bold uppercase tracking-widest text-xs">No demo projects found.</p>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -370,7 +365,6 @@ const Pricing = () => (
   </section>
 );
 
-// --- MAIN APP ---
 const App = () => {
   const [loading, setLoading] = useState(true);
   const [hash, setHash] = useState(window.location.hash);
@@ -394,12 +388,20 @@ const App = () => {
       
       try {
         const [s, sv, pt, t] = await Promise.all([
-          db.getSiteSettings(), db.getServices(), db.getPortfolio(), db.getTestimonials()
+          db.getSiteSettings(), 
+          db.getServices(), 
+          db.getPortfolio(), 
+          db.getTestimonials()
         ]);
+        
         if (s) setSettings(s);
+        
+        // Merge strategy: Start with defaults, then overwrite with what the database (or merged local cache) provides.
+        // handleRequest in services/supabase.ts already returns merged data, so we prioritize its output.
         if (sv && sv.length) setServices(sv);
         if (pt && pt.length) setPortfolio(pt);
         if (t && t.length) setTestimonials(t);
+        
       } catch (err) {
         console.warn("Using local fallbacks.", err);
       }
@@ -423,26 +425,15 @@ const App = () => {
     const payload = { name, email, phone, message };
 
     try {
-      // Step 1: Save to Database
       const success = await db.submitInquiry(payload);
-      
       if (success) {
         alert("Success! Inquiry Saved. I will contact you soon.");
-      } else {
-        // Log the failure but don't show the scary alert immediately
-        console.warn("Database save failed, falling back to direct contact.");
       }
-      
-      // Step 2: Immediate email notification via mailto (Ensures you get the message no matter what)
       const mailtoUrl = `mailto:${settings.contact_email}?subject=New Inquiry from ${name}&body=Name: ${name}%0D%0AEmail: ${email}%0D%0APhone: ${phone}%0D%0AMessage: ${message}`;
       window.open(mailtoUrl, '_blank');
-      
       (e.target as HTMLFormElement).reset();
-      
     } catch (err) {
       console.error("Submission error:", err);
-      // Even if everything breaks, let them know how to reach you
-      alert("Note: Please contact me directly via WhatsApp or Email if the form doesn't work. Thank you!");
     } finally {
       setIsSubmitting(false);
     }
