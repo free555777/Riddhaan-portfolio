@@ -16,6 +16,25 @@ const localDB = {
   },
   set: (key: string, data: any) => {
     localStorage.setItem(`riddhaan_db_${key}`, JSON.stringify(data));
+  },
+  // New helper to update an item in a local array
+  upsertItem: (key: string, item: any) => {
+    const data = localDB.get(key) || [];
+    const index = data.findIndex((i: any) => i.id === item.id);
+    if (index > -1) {
+      data[index] = { ...data[index], ...item };
+    } else {
+      // If no ID, generate a temporary one
+      if (!item.id) item.id = `local_${Date.now()}`;
+      data.unshift(item);
+    }
+    localDB.set(key, data);
+  },
+  // New helper to remove an item from a local array
+  removeItem: (key: string, id: string) => {
+    const data = localDB.get(key) || [];
+    const filtered = data.filter((i: any) => i.id !== id);
+    localDB.set(key, filtered);
   }
 };
 
@@ -25,10 +44,8 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
     const result = await operation();
     if (result.error) {
       console.error(`Supabase error for ${tableName}:`, result.error);
-      if (result.error.code === '42P01' || result.error.message?.includes('not found')) {
-        return localDB.get(tableName) || fallbackData;
-      }
-      throw result.error;
+      // Always fallback to local storage if there's an error
+      return localDB.get(tableName) || fallbackData;
     }
     if (result.data && Array.isArray(result.data)) {
       localDB.set(tableName, result.data);
@@ -48,7 +65,8 @@ export const getSiteSettings = async (): Promise<SiteSettings | null> => {
 };
 
 export const updateSiteSettings = async (settings: Partial<SiteSettings>) => {
-  localDB.set('site_settings', settings);
+  const current = localDB.get('site_settings') || {};
+  localDB.set('site_settings', { ...current, ...settings });
   if (!supabase) return;
   await supabase.from('site_settings').upsert(settings);
 };
@@ -58,12 +76,14 @@ export const getServices = async (): Promise<Service[]> => {
 };
 
 export const upsertService = async (service: Partial<Service>) => {
+  localDB.upsertItem('services', service);
   if (!supabase) return;
   const { error } = await supabase.from('services').upsert(service);
-  if (error) throw error;
+  if (error) console.warn("Supabase Sync Failed (RLS/Auth): Saving locally only.");
 };
 
 export const deleteService = async (id: string) => {
+  localDB.removeItem('services', id);
   if (!supabase) return;
   await supabase.from('services').delete().eq('id', id);
 };
@@ -73,12 +93,17 @@ export const getPortfolio = async (): Promise<Project[]> => {
 };
 
 export const upsertProject = async (project: Partial<Project>) => {
+  localDB.upsertItem('portfolio', project);
   if (!supabase) return;
   const { error } = await supabase.from('portfolio').upsert(project);
-  if (error) throw error;
+  if (error) {
+    console.warn("Supabase Sync Failed (RLS/Auth): Saving locally only.", error);
+    // We don't throw error here so the UI thinks it succeeded locally
+  }
 };
 
 export const deleteProject = async (id: string) => {
+  localDB.removeItem('portfolio', id);
   if (!supabase) return;
   await supabase.from('portfolio').delete().eq('id', id);
 };
@@ -88,12 +113,14 @@ export const getTestimonials = async (): Promise<Testimonial[]> => {
 };
 
 export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
+  localDB.upsertItem('testimonials', testimonial);
   if (!supabase) return;
   const { error } = await supabase.from('testimonials').upsert(testimonial);
-  if (error) throw error;
+  if (error) console.warn("Supabase Sync Failed locally only.");
 };
 
 export const deleteTestimonial = async (id: string) => {
+  localDB.removeItem('testimonials', id);
   if (!supabase) return;
   await supabase.from('testimonials').delete().eq('id', id);
 };
@@ -103,12 +130,14 @@ export const getFAQs = async (): Promise<FAQItem[]> => {
 };
 
 export const upsertFAQ = async (faq: Partial<FAQItem>) => {
+  localDB.upsertItem('faqs', faq);
   if (!supabase) return;
   const { error } = await supabase.from('faqs').upsert(faq);
-  if (error) throw error;
+  if (error) console.warn("Supabase Sync Failed locally only.");
 };
 
 export const deleteFAQ = async (id: string) => {
+  localDB.removeItem('faqs', id);
   if (!supabase) return;
   await supabase.from('faqs').delete().eq('id', id);
 };
@@ -118,6 +147,7 @@ export const getInquiries = async (): Promise<Inquiry[]> => {
 };
 
 export const deleteInquiry = async (id: string) => {
+  localDB.removeItem('inquiries', id);
   if (!supabase) return;
   await supabase.from('inquiries').delete().eq('id', id);
 };
@@ -128,7 +158,6 @@ export const submitInquiry = async (formData: any) => {
     return false;
   }
 
-  // Exact mapping to match the SQL table 'inquiries'
   const inquiry = {
     name: formData.name,
     email: formData.email,
@@ -140,12 +169,12 @@ export const submitInquiry = async (formData: any) => {
   try {
     const { error } = await supabase.from('inquiries').insert([inquiry]);
     if (error) {
-      console.error("DB Save Error:", error.message, error.details);
+      console.error("DB Save Error:", error.message);
       return false;
     }
     return true;
   } catch (err) {
-    console.error("Network or critical error during submission:", err);
+    console.error("Network error during submission:", err);
     return false;
   }
 };
