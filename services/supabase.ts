@@ -49,18 +49,23 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
     
     const serverItems = (data && Array.isArray(data)) ? data : [];
     
-    // Merge logic:
-    // 1. Start with Fallbacks
-    // 2. Overwrite with Cloud Data (Source of Truth)
-    // 3. Add Local items only if they are NEW (not in cloud yet)
+    // Merge logic: Prioritize server data.
+    // Local items are only kept if they haven't been synced (id starts with 'local_')
     const mergedMap = new Map();
-    fallbackData.forEach((item: any) => mergedMap.set(item.id, item));
+    
+    // 1. Add server items (Source of Truth)
     serverItems.forEach((item: any) => mergedMap.set(item.id, item));
     
-    // Only keep local items that are truly local-only (not synced)
+    // 2. Add local items only if they are not yet in the server list
     localItems.forEach((item: any) => {
+      // Check if this local item has already been synced (we might find a server version with same title/desc)
+      // or if it's uniquely local.
       if (typeof item.id === 'string' && item.id.startsWith('local_')) {
-        mergedMap.set(item.id, item);
+        // Simple check: if a server item with the same title exists, we assume it's synced
+        const isAlreadySynced = serverItems.some(si => si.title === item.title);
+        if (!isAlreadySynced) {
+          mergedMap.set(item.id, item);
+        }
       }
     });
     
@@ -110,20 +115,33 @@ export const deleteService = async (id: string) => {
 };
 
 export const getPortfolio = async (): Promise<Project[]> => {
-  return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('created_at', { ascending: false }), []);
+  // Fix: Order by ID if created_at is missing, but usually table has created_at
+  return handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*'), []);
 };
 
 export const upsertProject = async (project: Partial<Project>) => {
-  const updated = localDB.upsertItem('portfolio', project);
+  const localItem = localDB.upsertItem('portfolio', project);
   if (!supabase) return { success: true, cloud: false };
   
-  // If it's a new project and RLS allows it, Supabase will return it
-  const { error } = await supabase.from('portfolio').upsert(updated);
-  if (error) {
-    console.error("Cloud Save Failed:", error.message);
-    return { success: true, cloud: false, error: error.message };
+  try {
+    // We try to upsert. If successful, we refresh to get proper IDs.
+    const { data, error } = await supabase.from('portfolio').upsert(localItem).select();
+    
+    if (error) {
+      console.error("Cloud Save Failed:", error.message);
+      return { success: true, cloud: false, error: error.message };
+    }
+
+    // If sync succeeded, update localDB with the server version (removes local_ prefix)
+    if (data && data[0]) {
+      localDB.removeItem('portfolio', localItem.id!); // Remove temp local item
+      localDB.upsertItem('portfolio', data[0]); // Add proper server item
+    }
+
+    return { success: true, cloud: true };
+  } catch (err) {
+    return { success: true, cloud: false };
   }
-  return { success: true, cloud: true };
 };
 
 export const deleteProject = async (id: string) => {
@@ -133,7 +151,7 @@ export const deleteProject = async (id: string) => {
 };
 
 export const getTestimonials = async (): Promise<Testimonial[]> => {
-  return handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*').order('id', { ascending: false }), []);
+  return handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*'), []);
 };
 
 export const upsertTestimonial = async (testimonial: Partial<Testimonial>) => {
@@ -150,7 +168,7 @@ export const deleteTestimonial = async (id: string) => {
 };
 
 export const getFAQs = async (): Promise<FAQItem[]> => {
-  return handleRequest('faqs', async () => await supabase!.from('faqs').select('*').order('id', { ascending: true }), []);
+  return handleRequest('faqs', async () => await supabase!.from('faqs').select('*'), []);
 };
 
 export const upsertFAQ = async (faq: Partial<FAQItem>) => {
@@ -167,7 +185,7 @@ export const deleteFAQ = async (id: string) => {
 };
 
 export const getInquiries = async (): Promise<Inquiry[]> => {
-  return handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*').order('created_at', { ascending: false }), []);
+  return handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*'), []);
 };
 
 export const deleteInquiry = async (id: string) => {
