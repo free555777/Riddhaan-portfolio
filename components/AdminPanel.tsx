@@ -13,7 +13,9 @@ import {
   SERVICES as DEFAULT_SERVICES, 
   PORTFOLIO_ITEMS as DEFAULT_PORTFOLIO, 
   TESTIMONIALS as DEFAULT_TESTIMONIALS,
-  FAQ_DATA as DEFAULT_FAQS
+  FAQ_DATA as DEFAULT_FAQS,
+  SITE_NAME as DEFAULT_NAME,
+  WHATSAPP_NUMBER as DEFAULT_WA
 } from '../constants.ts';
 import Button from './Button.tsx';
 
@@ -58,11 +60,16 @@ const AdminPanel = () => {
       ]);
       
       setInquiries(inq || []);
-      setServices(serv.length > 0 ? serv : DEFAULT_SERVICES);
-      setProjects(port.length > 0 ? port : DEFAULT_PORTFOLIO);
-      setTestimonials(test.length > 0 ? test : DEFAULT_TESTIMONIALS);
-      setFaqs(fqs.length > 0 ? fqs : DEFAULT_FAQS);
-      setSettings(sett);
+      setServices(serv && serv.length > 0 ? serv : DEFAULT_SERVICES);
+      setProjects(port && port.length > 0 ? port : DEFAULT_PORTFOLIO);
+      setTestimonials(test && test.length > 0 ? test : DEFAULT_TESTIMONIALS);
+      setFaqs(fqs && fqs.length > 0 ? fqs : DEFAULT_FAQS);
+      setSettings(sett || {
+        id: '1', site_name: DEFAULT_NAME, tagline: 'PREMIUM STUDIO', logo_url: '', 
+        whatsapp_number: DEFAULT_WA, contact_phone: '+91 95212 07156', contact_email: 'riddhaanleo@gmail.com',
+        address: 'India', instagram_url: '#', twitter_url: '#', linkedin_url: '#', footer_text: '',
+        seo_description: 'Portfolio description here'
+      });
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
@@ -98,38 +105,33 @@ const AdminPanel = () => {
       if (type === 'portfolio') res = await db.upsertProject(data);
       if (type === 'testimonials') res = await db.upsertTestimonial(data);
       if (type === 'faqs') res = await db.upsertFAQ(data);
-      if (type === 'settings') {
-        await db.updateSiteSettings(data);
-        res = { cloud: true };
-      }
+      if (type === 'settings') res = await db.updateSiteSettings(data);
       
+      if (res && !res.cloud) {
+        alert("⚠️ WARNING: Saved LOCALLY only. This data will NOT show on other devices. Please check your Supabase RLS Policies.");
+      } else {
+        alert("✅ SUCCESS: Data synced to Cloud Database! It should appear on all devices now.");
+      }
+
       setEditingItem(null);
       await fetchAllData();
-
-      if (res && !res.cloud) {
-        alert("Saved LOCALLY! ⚠️ Data is in this browser only. Enable RLS in Supabase to sync across devices.");
-      } else {
-        alert("SUCCESS! ✅ Data synced with Cloud.");
-      }
     } catch (err: any) {
       console.error("Save error:", err);
-      setEditingItem(null);
-      await fetchAllData();
-      alert("Saved to Browser Cache only.");
+      alert("Error saving data. Please refresh and try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (type: Tab, id: string) => {
-    if (!confirm("Delete this item?")) return;
+    if (!confirm("Delete this item permanently?")) return;
     try {
       if (type === 'inquiries') await db.deleteInquiry(id);
       if (type === 'services') await db.deleteService(id);
       if (type === 'portfolio') await db.deleteProject(id);
       if (type === 'testimonials') await db.deleteTestimonial(id);
       if (type === 'faqs') await db.deleteFAQ(id);
-      fetchAllData();
+      await fetchAllData();
     } catch (err) {
       alert("Delete failed.");
     }
@@ -247,7 +249,7 @@ const AdminPanel = () => {
                     <div key={p.id} className="bg-white rounded-[32px] shadow-sm border border-gray-50 overflow-hidden flex flex-col group">
                       <div className="h-48 w-full bg-gray-100 relative">
                         <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
-                        {p.id?.toString().startsWith('item_') && (
+                        {typeof p.id === 'string' && p.id.startsWith('local_') && (
                           <div className="absolute top-4 right-4 bg-amber-500 text-white p-2 rounded-full shadow-lg" title="Only visible on this device">
                             <CloudOff size={16} />
                           </div>
