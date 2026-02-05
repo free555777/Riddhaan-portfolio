@@ -49,9 +49,8 @@ const handleRequest = async (tableName: string, operation: () => Promise<any>, f
     const mergedMap = new Map();
     serverItems.forEach((item: any) => mergedMap.set(item.id, item));
     localItems.forEach((item: any) => {
-      // Only keep local items that haven't been synced yet
       if (typeof item.id === 'string' && item.id.startsWith('local_')) {
-        const alreadyExists = serverItems.some(si => si.title === item.title);
+        const alreadyExists = serverItems.some(si => (si.title || si.question) === (item.title || item.question));
         if (!alreadyExists) mergedMap.set(item.id, item);
       }
     });
@@ -80,91 +79,65 @@ export const updateSiteSettings = async (settings: any) => {
   return { success: !error, cloud: !error, error: error?.message };
 };
 
-export const getServices = () => handleRequest('services', () => supabase!.from('services').select('*'), []);
+export const getServices = () => handleRequest('services', async () => await supabase!.from('services').select('*'), []);
 export const upsertService = async (data: any) => {
   const local = localDB.upsertItem('services', data);
   if (!supabase) return { success: true, cloud: false };
   const { error } = await supabase.from('services').upsert(local);
-  return { success: true, cloud: !error, error: error?.message };
+  return { success: !error, cloud: !error, error: error?.message };
 };
-
 export const deleteService = async (id: string) => {
   localDB.removeItem('services', id);
   if (supabase) await supabase.from('services').delete().eq('id', id);
 };
 
-export const getPortfolio = () => handleRequest('portfolio', () => supabase!.from('portfolio').select('*').order('created_at', { ascending: false }), []);
-
+export const getPortfolio = () => handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('created_at', { ascending: false }), []);
 export const upsertProject = async (project: Partial<Project>) => {
-  // 1. First, save to local storage with a temporary 'local_' ID if it's new
   const localItem = localDB.upsertItem('portfolio', project);
-  
-  if (!supabase) return { success: true, cloud: false, error: "Supabase not connected" };
-
+  if (!supabase) return { success: true, cloud: false };
   try {
-    const isNewLocal = localItem.id.startsWith('local_');
-    const projectToSync = { ...localItem };
-    
-    // If it's a new project, we want a clean ID in the cloud (not starting with 'local_')
-    if (isNewLocal) {
-      projectToSync.id = `id_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-    }
-
-    // 2. Upsert to Supabase with the clean ID
-    const { data, error } = await supabase.from('portfolio').upsert(projectToSync).select();
-    
-    if (error) {
-      return { success: true, cloud: false, error: error.message };
-    }
-
-    // 3. If successful, update our local copy to use the permanent ID from the server
-    if (data && data[0]) {
-      // Remove the old local-only entry
-      if (isNewLocal) {
-        localDB.removeItem('portfolio', localItem.id);
-      }
-      // Add/Update the server-confirmed entry
+    const isNew = String(localItem.id).startsWith('local_');
+    const toSync = { ...localItem };
+    if (isNew) toSync.id = `proj_${Date.now()}`;
+    const { data, error } = await supabase.from('portfolio').upsert(toSync).select();
+    if (error) return { success: true, cloud: false, error: error.message };
+    if (data?.[0]) {
+      if (isNew) localDB.removeItem('portfolio', localItem.id);
       localDB.upsertItem('portfolio', data[0]);
     }
-
     return { success: true, cloud: true };
-  } catch (err: any) {
-    return { success: true, cloud: false, error: err.message };
-  }
+  } catch (err: any) { return { success: true, cloud: false, error: err.message }; }
 };
-
 export const deleteProject = async (id: string) => {
   localDB.removeItem('portfolio', id);
   if (supabase) await supabase.from('portfolio').delete().eq('id', id);
 };
 
-export const getFAQs = () => handleRequest('faqs', () => supabase!.from('faqs').select('*'), []);
+export const getFAQs = () => handleRequest('faqs', async () => await supabase!.from('faqs').select('*'), []);
 export const upsertFAQ = async (data: any) => {
   const local = localDB.upsertItem('faqs', data);
   if (!supabase) return { success: true, cloud: false };
   const { error } = await supabase.from('faqs').upsert(local);
-  return { success: true, cloud: !error, error: error?.message };
+  return { success: !error, cloud: !error, error: error?.message };
 };
-
 export const deleteFAQ = async (id: string) => {
   localDB.removeItem('faqs', id);
   if (supabase) await supabase.from('faqs').delete().eq('id', id);
 };
 
-export const getTestimonials = () => handleRequest('testimonials', () => supabase!.from('testimonials').select('*'), []);
+export const getTestimonials = () => handleRequest('testimonials', async () => await supabase!.from('testimonials').select('*'), []);
 export const upsertTestimonial = async (data: any) => {
   const local = localDB.upsertItem('testimonials', data);
   if (!supabase) return { success: true, cloud: false };
   const { error } = await supabase.from('testimonials').upsert(local);
-  return { success: true, cloud: !error, error: error?.message };
+  return { success: !error, cloud: !error, error: error?.message };
 };
-
 export const deleteTestimonial = async (id: string) => {
   localDB.removeItem('testimonials', id);
   if (supabase) await supabase.from('testimonials').delete().eq('id', id);
 };
 
-export const getInquiries = () => handleRequest('inquiries', () => supabase!.from('inquiries').select('*'), []);
+export const getInquiries = () => handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*').order('created_at', { ascending: false }), []);
 export const deleteInquiry = async (id: string) => {
   localDB.removeItem('inquiries', id);
   if (supabase) await supabase.from('inquiries').delete().eq('id', id);
@@ -176,12 +149,20 @@ export const submitInquiry = async (formData: any) => {
   return !error;
 };
 
+// --- REAL AUTHENTICATION ---
 export const adminLogin = async (email: string, pass: string) => {
-  if (email === 'riddhaan@gmail.com' && pass === 'Riddhaan@55') {
-    localStorage.setItem('admin_token', 'demo_token_riddhaan');
-    return { success: true };
-  }
-  return { success: false };
+  if (!supabase) return { success: false, error: "Supabase not connected" };
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 };
-export const isAdminLoggedIn = () => !!localStorage.getItem('admin_token');
-export const logoutAdmin = () => localStorage.removeItem('admin_token');
+
+export const isAdminLoggedIn = async () => {
+  if (!supabase) return false;
+  const { data: { session } } = await supabase.auth.getSession();
+  return !!session;
+};
+
+export const logoutAdmin = async () => {
+  if (supabase) await supabase.auth.signOut();
+};
