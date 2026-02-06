@@ -143,6 +143,16 @@ export const PORTFOLIO_ITEMS: Project[] = [
     status: 'published',
     project_type: 'demo'
   },
+  {
+    id: '5',
+    title: 'LUXECUTS',
+    category: 'Hair cut selon',
+    image: 'https://i.postimg.cc/HWSKc86h/a-iss-image-ko-4k-or-h-(2).jpg',
+    description: 'Ultra-sleek, fast-loading stock market website with stunning dark UI, smooth hover animations, vibrant colors, and mobile-friendly design—eye-catchy yet professional!',
+    link: 'https://luxecuts-salon.netlify.app/',
+    status: 'published',
+    project_type: 'demo'
+  },
 ];
 
 export const TESTIMONIALS: Testimonial[] = [
