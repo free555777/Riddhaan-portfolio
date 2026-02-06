@@ -30,7 +30,7 @@ import { SiteSettings, PricingPlan, Service, Project, Testimonial } from './type
 const IconMap: Record<string, React.ReactNode> = {
   Layout: <LayoutIcon className="w-8 h-8" />,
   Smartphone: <Smartphone className="w-8 h-8" />,
-  ShoppingCart: <ShoppingCart className="ShoppingCart w-8 h-8" />,
+  ShoppingCart: <ShoppingCart className="w-8 h-8" />,
   Search: <Search className="w-8 h-8" />,
   ShieldCheck: <ShieldCheck className="w-8 h-8" />,
   Database: <Database className="w-8 h-8" />,
@@ -246,32 +246,44 @@ const Services = ({ services }: { services: Service[] }) => (
   </section>
 );
 
-const ProjectCard: React.FC<{ item: Project, idx: number }> = ({ item, idx }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    whileHover={{ y: -10, scale: 1.02 }}
-    viewport={{ once: true }}
-    transition={{ delay: idx * 0.1, duration: 0.5 }}
-    className="transition-all duration-300"
-  >
-    <a 
-      href={item.link} 
-      target="_blank" 
-      rel="noopener noreferrer" 
-      className="group block relative rounded-[24px] md:rounded-[40px] overflow-hidden shadow-2xl aspect-[16/9] bg-gray-100"
+const ProjectCard: React.FC<{ item: Project, idx: number }> = ({ item, idx }) => {
+  const [imgError, setImgError] = useState(false);
+  
+  // Robust image handling: Ensure default is used if image path is broken
+  const imgSrc = !imgError && item.image ? item.image : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -10, scale: 1.02 }}
+      viewport={{ once: true }}
+      transition={{ delay: idx * 0.1, duration: 0.5 }}
+      className="transition-all duration-300"
     >
-      <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt={item.title} />
-      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent flex flex-col justify-end p-6 md:p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <h3 className="text-white text-base md:text-2xl font-black mb-1">{item.title}</h3>
-        <p className="text-gray-300 text-[8px] md:text-sm mb-3 md:mb-4 font-medium uppercase tracking-widest">{item.category}</p>
-        <div className="text-white text-[10px] md:text-sm font-black flex items-center group-hover:translate-x-2 transition-transform duration-300">
-          VIEW PROJECT <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
+      <a 
+        href={item.link} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className="group block relative rounded-[24px] md:rounded-[40px] overflow-hidden shadow-2xl aspect-[16/9] bg-gray-100"
+      >
+        <img 
+          src={imgSrc} 
+          onError={() => setImgError(true)}
+          className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" 
+          alt={item.title} 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent flex flex-col justify-end p-6 md:p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <h3 className="text-white text-base md:text-2xl font-black mb-1">{item.title}</h3>
+          <p className="text-gray-300 text-[8px] md:text-sm mb-3 md:mb-4 font-medium uppercase tracking-widest">{item.category}</p>
+          <div className="text-white text-[10px] md:text-sm font-black flex items-center group-hover:translate-x-2 transition-transform duration-300">
+            VIEW PROJECT <ArrowRight className="ml-2 w-3 h-3 md:w-4 md:h-4" />
+          </div>
         </div>
-      </div>
-    </a>
-  </motion.div>
-);
+      </a>
+    </motion.div>
+  );
+};
 
 const Portfolio = ({ items }: { items: Project[] }) => {
   const realProjects = items.filter(p => p.project_type === 'real' || !p.project_type);
@@ -290,7 +302,7 @@ const Portfolio = ({ items }: { items: Project[] }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12">
             {realProjects.length > 0 ? (
               realProjects.map((item, idx) => (
-                <ProjectCard key={item.id} item={item} idx={idx} />
+                <ProjectCard key={item.id || item.title} item={item} idx={idx} />
               ))
             ) : (
               <p className="col-span-full text-center text-gray-400 py-10 font-bold uppercase tracking-widest text-xs">No real projects found.</p>
@@ -306,7 +318,7 @@ const Portfolio = ({ items }: { items: Project[] }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-12 opacity-80 hover:opacity-100 transition-opacity">
             {demoProjects.length > 0 ? (
               demoProjects.map((item, idx) => (
-                <ProjectCard key={item.id} item={item} idx={idx} />
+                <ProjectCard key={item.id || item.title} item={item} idx={idx} />
               ))
             ) : (
               <p className="col-span-full text-center text-gray-400 py-10 font-bold uppercase tracking-widest text-xs">No demo projects found.</p>
@@ -397,7 +409,6 @@ const App = () => {
         if (s) setSettings(s);
         
         // Merge strategy: Start with defaults, then overwrite with what the database (or merged local cache) provides.
-        // handleRequest in services/supabase.ts already returns merged data, so we prioritize its output.
         if (sv && sv.length) setServices(sv);
         if (pt && pt.length) setPortfolio(pt);
         if (t && t.length) setTestimonials(t);
