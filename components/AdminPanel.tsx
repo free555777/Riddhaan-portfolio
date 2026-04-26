@@ -171,7 +171,7 @@ const AdminPanel = () => {
           </form>
           <div className="mt-8 pt-8 border-t border-gray-50">
             <p className="text-[9px] text-gray-400 text-center uppercase font-black tracking-widest">
-              Don't have an account? Create one in <br/> Supabase Dashboard > Auth > Users
+              Don't have an account? Create one in <br/> Supabase Dashboard &gt; Auth &gt; Users
             </p>
           </div>
         </div>
