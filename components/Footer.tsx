@@ -86,10 +86,14 @@ const Footer: React.FC<FooterProps> = ({ settings }) => {
           </div>
         </div>
 
-        <div className="border-t border-white/5 pt-12 flex flex-col md:row justify-between items-center gap-6">
-          <p className="text-gray-500 text-[10px] font-black tracking-widest uppercase">
+        <div className="border-t border-white/5 pt-12 flex flex-col sm:flex-row justify-between items-center gap-6 text-xs text-gray-500">
+          <p className="text-[10px] font-black tracking-widest uppercase">
             &copy; {new Date().getFullYear()} {SITE_NAME} STUDIO. ALL RIGHTS RESERVED.
           </p>
+          <div className="flex gap-6 text-[10px] font-black tracking-widest uppercase">
+            <a href="/sitemap.html" className="hover:text-primary transition-colors">Sitemap (HTML)</a>
+            <a href="/sitemap.xml" target="_blank" className="hover:text-primary transition-colors">Sitemap (XML)</a>
+          </div>
         </div>
       </div>
     </footer>
