@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!assets/|sitemap\\.xml|sitemap\\.html|robots\\.txt|favicon\\.ico).*)",
+      "source": "/((?!assets/|sitemap\\.xml|sitemap\\.html|sitemap|robots\\.txt|favicon\\.ico|.*\\.[a-zA-Z0-9]+$).*)",
       "destination": "/index.html"
     }
   ]
