@@ -96,8 +96,9 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
             y: [-30, 30, -30],
             scale: [1, 1.1, 1],
           }}
+          style={{ willChange: "transform", transform: "translate3d(0, 0, 0)" }}
           transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-[10%] -left-[10%] w-full h-[80%] bg-[#4D88FF] rounded-full blur-[150px] md:blur-[250px] opacity-60"
+          className="absolute -top-[10%] -left-[10%] w-full h-[80%] bg-[#4D88FF] rounded-full blur-[100px] md:blur-[160px] opacity-40"
         />
         <motion.div
           animate={{
@@ -105,10 +106,11 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
             y: [30, -30, 30],
             scale: [1, 1.2, 1],
           }}
+          style={{ willChange: "transform", transform: "translate3d(0, 0, 0)" }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute -bottom-[20%] -right-[10%] w-full h-[90%] bg-[#FFF6A1] rounded-full blur-[140px] md:blur-[230px] opacity-80"
+          className="absolute -bottom-[20%] -right-[10%] w-full h-[90%] bg-[#FFF6A1] rounded-full blur-[90px] md:blur-[140px] opacity-50"
         />
-        <div className="absolute inset-0 bg-white/10 backdrop-blur-[10px]"></div>
+        <div className="absolute inset-0 bg-white/40"></div>
         <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/p6.png')]"></div>
       </div>
       
@@ -119,8 +121,9 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: -10 }}
+            style={{ willChange: "transform, opacity" }}
             transition={{ type: "spring", stiffness: 120, damping: 12 }}
-            className={`absolute ${popups[activePopup].pos} p-3.5 md:p-5 rounded-2xl md:rounded-3xl shadow-2xl flex items-center gap-2 md:gap-3 backdrop-blur-lg border border-white/40 text-white font-black text-[9px] md:text-xs uppercase tracking-widest ${popups[activePopup].color}`}
+            className={`absolute ${popups[activePopup].pos} p-3.5 md:p-5 rounded-2xl md:rounded-3xl shadow-2xl flex items-center gap-2 md:gap-3 border border-white/40 text-white font-black text-[9px] md:text-xs uppercase tracking-widest ${popups[activePopup].color}`}
           >
             {popups[activePopup].text}
           </motion.div>
@@ -158,16 +161,13 @@ const About = () => (
           initial={{ opacity: 0, x: -30 }} 
           whileInView={{ opacity: 1, x: 0 }} 
           viewport={{ once: true }}
+          style={{ willChange: "transform, opacity" }}
           className="relative h-full min-h-[300px] sm:min-h-[500px] lg:min-h-[700px]"
         >
-          <motion.img 
-            initial={{ scale: 0.95 }}
-            whileInView={{ scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            whileHover={{ scale: 1.02 }}
+          <img 
             src="https://i.postimg.cc/g0Q0Zb5y/b-jowline-visible-kro.jpg" 
             alt="Riddhaan - Full Stack Developer Profile Picture" 
-            className="rounded-[24px] md:rounded-[40px] shadow-2xl w-full h-full object-cover block" 
+            className="rounded-[24px] md:rounded-[40px] shadow-2xl w-full h-full object-cover block hover:scale-[1.01] transition-transform duration-500 ease-out" 
             loading="lazy"
             width="600"
             height="750"
@@ -196,34 +196,34 @@ const About = () => (
           </div>
 
           <div className="grid grid-cols-2 gap-y-6 md:gap-y-8 gap-x-4 md:gap-x-8 mt-4 text-left">
-            <motion.div whileHover={{ scale: 1.08 }} className="flex items-center group cursor-pointer">
+            <div className="flex items-center group cursor-pointer hover:scale-105 transition-transform duration-200">
               <div className="mr-3 md:mr-4 text-primary p-2 bg-blue-50 rounded-lg md:rounded-xl group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-blue-200 group-hover:shadow-lg border border-transparent group-hover:border-primary/20"><Zap size={18} className="md:w-[22px]" /></div>
               <div>
                 <h4 className="font-black text-gray-900 uppercase tracking-wide text-[8px] md:text-[11px] mb-0.5 group-hover:text-primary transition-colors">Full Stack</h4>
                 <p className="hidden sm:block text-[8px] md:text-[10px] text-gray-500 font-bold">JS, React, Kotlin.</p>
               </div>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.08 }} className="flex items-center group cursor-pointer">
+            </div>
+            <div className="flex items-center group cursor-pointer hover:scale-105 transition-transform duration-200">
               <div className="mr-3 md:mr-4 text-primary p-2 bg-blue-50 rounded-lg md:rounded-xl group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-blue-200 group-hover:shadow-lg border border-transparent group-hover:border-primary/20"><ShieldCheck size={18} className="md:w-[22px]" /></div>
               <div>
                 <h4 className="font-black text-gray-900 uppercase tracking-wide text-[8px] md:text-[11px] mb-0.5 group-hover:text-primary transition-colors">Solutions</h4>
                 <p className="hidden sm:block text-[8px] md:text-[10px] text-gray-500 font-bold">Clean & creative.</p>
               </div>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.08 }} className="flex items-center group cursor-pointer">
+            </div>
+            <div className="flex items-center group cursor-pointer hover:scale-105 transition-transform duration-200">
               <div className="mr-3 md:mr-4 text-primary p-2 bg-blue-50 rounded-lg md:rounded-xl group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-blue-200 group-hover:shadow-lg border border-transparent group-hover:border-primary/20"><Smartphone size={18} className="md:w-[22px]" /></div>
               <div>
                 <h4 className="font-black text-gray-900 uppercase tracking-wide text-[8px] md:text-[11px] mb-0.5 group-hover:text-primary transition-colors">Mobile First</h4>
                 <p className="hidden sm:block text-[8px] md:text-[10px] text-gray-500 font-bold">Responsive Web.</p>
               </div>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.08 }} className="flex items-center group cursor-pointer">
+            </div>
+            <div className="flex items-center group cursor-pointer hover:scale-105 transition-transform duration-200">
               <div className="mr-3 md:mr-4 text-primary p-2 bg-blue-50 rounded-lg md:rounded-xl group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-blue-200 group-hover:shadow-lg border border-transparent group-hover:border-primary/20"><Sparkles size={18} className="md:w-[22px]" /></div>
               <div>
                 <h4 className="font-black text-gray-900 uppercase tracking-wide text-[8px] md:text-[11px] mb-0.5 group-hover:text-primary transition-colors">AI Powered</h4>
                 <p className="hidden sm:block text-[8px] md:text-[10px] text-gray-500 font-bold">Fast results.</p>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>
@@ -260,10 +260,10 @@ const ProjectCard: React.FC<{ item: Project, idx: number }> = ({ item, idx }) =>
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -10, scale: 1.02 }}
       viewport={{ once: true }}
+      style={{ willChange: "transform, opacity" }}
       transition={{ delay: idx * 0.1, duration: 0.5 }}
-      className="transition-all duration-300"
+      className="hover:-translate-y-2 hover:scale-[1.02] transition-transform duration-300 ease-out"
     >
       <a 
         href={item.link} 
@@ -382,27 +382,71 @@ const Pricing = () => (
   </section>
 );
 
-const App = () => {
-  const [loading, setLoading] = useState(true);
-  const [hash, setHash] = useState(window.location.hash);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [settings, setSettings] = useState<SiteSettings>({
+// --- LAZY INITIALIZERS FOR INSTANT SPEED ---
+const getInitialSettings = (): SiteSettings => {
+  try {
+    const cached = localStorage.getItem('riddhaan_db_site_settings');
+    if (cached) return JSON.parse(cached);
+  } catch (e) {
+    console.warn("Storage settings read failed:", e);
+  }
+  return {
     id: '1', site_name: DEFAULT_NAME, tagline: 'PREMIUM FREELANCE STUDIO', logo_url: '', 
     whatsapp_number: DEFAULT_WA, contact_phone: '+91 95212 07156', contact_email: 'riddhaanleo@gmail.com',
     address: 'India', instagram_url: '#', twitter_url: '#', linkedin_url: '#', footer_text: '',
     seo_description: 'I create modern, fast, responsive, and SEO optimized websites and applications that help businesses grow online.'
-  });
+  };
+};
+
+const getInitialServices = (): Service[] => {
+  try {
+    const cached = localStorage.getItem('riddhaan_db_services');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return DEFAULT_SERVICES;
+};
+
+const getInitialPortfolio = (): Project[] => {
+  try {
+    const cached = localStorage.getItem('riddhaan_db_portfolio');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return DEFAULT_PORTFOLIO;
+};
+
+const getInitialTestimonials = (): Testimonial[] => {
+  try {
+    const cached = localStorage.getItem('riddhaan_db_testimonials');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return DEFAULT_TESTIMONIALS;
+};
+
+const App = () => {
+  // We initialize as loading false because we already have valid content cached/constant-loaded instantly.
+  const [loading, setLoading] = useState(false);
+  const [hash, setHash] = useState(window.location.hash);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);
-  const [portfolio, setPortfolio] = useState<Project[]>(DEFAULT_PORTFOLIO);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
+  const [settings, setSettings] = useState<SiteSettings>(getInitialSettings);
+  const [services, setServices] = useState<Service[]>(getInitialServices);
+  const [portfolio, setPortfolio] = useState<Project[]>(getInitialPortfolio);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(getInitialTestimonials);
 
   useEffect(() => {
+    const handleHash = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', handleHash);
+    
     const init = async () => {
-      const handleHash = () => setHash(window.location.hash);
-      window.addEventListener('hashchange', handleHash);
-      
       try {
         const [s, sv, pt, t] = await Promise.all([
           db.getSiteSettings(), 
@@ -419,13 +463,12 @@ const App = () => {
         if (t && t.length) setTestimonials(t);
         
       } catch (err) {
-        console.warn("Using local fallbacks.", err);
+        console.warn("Using local fallbacks in background.", err);
       }
-      
-      setLoading(false);
-      return () => window.removeEventListener('hashchange', handleHash);
     };
     init();
+    
+    return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
   const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -479,32 +522,28 @@ const App = () => {
                 I'm currently accepting new projects. Fill out the form or send an email to get a response within 12 hours.
               </p>
               <div className="space-y-6 md:space-y-8 flex flex-col items-center lg:items-start">
-                <motion.div 
-                  whileHover={{ x: 10 }}
-                  className="flex items-center group transition-all cursor-pointer"
+                <div 
+                  className="flex items-center group cursor-pointer hover:translate-x-2 transition-transform duration-300"
                   onClick={() => window.location.href = `mailto:${settings.contact_email}`}
                 >
-                  <motion.div
-                    whileHover={{ scale: 1.2, rotate: -10 }}
-                    className="mr-4 p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors"
+                  <div
+                    className="mr-4 p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-primary/20 group-hover:border-primary/40 group-hover:scale-110 transition-all duration-300"
                   >
                     <Mail className="w-8 h-8 text-primary" />
-                  </motion.div>
+                  </div>
                   <span className="text-base md:text-2xl font-black group-hover:text-primary transition-colors">{settings.contact_email}</span>
-                </motion.div>
-                <motion.div 
-                  whileHover={{ x: 10 }}
-                  className="flex items-center group transition-all cursor-pointer"
+                </div>
+                <div 
+                  className="flex items-center group cursor-pointer hover:translate-x-2 transition-transform duration-300"
                   onClick={() => window.open(`https://wa.me/${settings.whatsapp_number}`, '_blank')}
                 >
-                  <motion.div
-                    whileHover={{ scale: 1.2, rotate: 10 }}
-                    className="mr-4 p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-[#25D366]/20 group-hover:border-[#25D366]/40 transition-colors"
+                  <div
+                    className="mr-4 p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-[#25D366]/20 group-hover:border-[#25D366]/40 group-hover:scale-110 transition-all duration-300"
                   >
                     <MessageCircle className="w-8 h-8 text-[#25D366]" />
-                  </motion.div>
+                  </div>
                   <span className="text-base md:text-2xl font-black group-hover:text-[#25D366] transition-colors">{settings.contact_phone}</span>
-                </motion.div>
+                </div>
               </div>
             </div>
             <div className="bg-white rounded-[24px] md:rounded-[48px] p-8 md:p-12 text-gray-900 shadow-2xl">
