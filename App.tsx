@@ -132,10 +132,11 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
           <div className="inline-flex items-center py-1.5 md:py-2 px-4 md:px-6 rounded-full bg-white/50 backdrop-blur-md border border-white/80 text-blue-700 text-[9px] md:text-xs font-black mb-6 md:mb-10 shadow-sm uppercase tracking-widest">
             ✨ {settings.tagline}
           </div>
-          <h1 className="text-5xl sm:text-7xl md:text-9xl font-black text-gray-900 leading-[1.05] md:leading-[0.9] mb-6 md:mb-10 tracking-tighter">
+          <h1 className="sr-only">Full Stack Web Developer  SEO Optimized Websites</h1>
+          <div className="text-5xl sm:text-7xl md:text-9xl font-black text-gray-900 leading-[1.05] md:leading-[0.9] mb-6 md:mb-10 tracking-tighter" aria-hidden="true">
             Design. Develop. <br className="hidden sm:block" />
             <span className="text-primary italic">Deploy.</span>
-          </h1>
+          </div>
           <p className="text-base sm:text-lg md:text-2xl text-gray-700 mb-8 md:mb-14 leading-relaxed max-w-2xl mx-auto font-semibold px-4 md:px-0">
             {settings.seo_description}
           </p>
@@ -165,8 +166,11 @@ const About = () => (
             transition={{ duration: 0.8, ease: "easeOut" }}
             whileHover={{ scale: 1.02 }}
             src="https://i.postimg.cc/g0Q0Zb5y/b-jowline-visible-kro.jpg" 
-            alt="Riddhaan - Full Stack Developer" 
+            alt="Riddhaan - Full Stack Developer Profile Picture" 
             className="rounded-[24px] md:rounded-[40px] shadow-2xl w-full h-full object-cover block" 
+            loading="lazy"
+            width="600"
+            height="750"
           />
           <div className="absolute -bottom-6 md:-bottom-10 -right-6 md:-right-10 w-32 h-32 md:w-80 md:h-80 bg-primary/10 rounded-full blur-[60px] md:blur-[100px] -z-10"></div>
         </motion.div>
@@ -271,7 +275,8 @@ const ProjectCard: React.FC<{ item: Project, idx: number }> = ({ item, idx }) =>
           src={imgSrc} 
           onError={() => setImgError(true)}
           className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" 
-          alt={item.title} 
+          alt={`${item.title} - Riddhaan Premium Project Portfolio`} 
+          loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent flex flex-col justify-end p-6 md:p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <h3 className="text-white text-base md:text-2xl font-black mb-1">{item.title}</h3>
@@ -345,7 +350,7 @@ const Reviews = ({ testimonials }: { testimonials: Testimonial[] }) => (
             className="bg-white p-6 md:p-10 rounded-[24px] md:rounded-[40px] border border-gray-100 shadow-sm relative group hover:shadow-xl transition-all flex flex-col"
           >
             <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
-              <img src={t.avatar} alt={t.name} className="w-10 h-10 md:w-14 md:h-14 rounded-full object-cover border-2 border-primary/10" />
+              <img src={t.avatar} alt={`${t.name} - ${t.role} client review`} className="w-10 h-10 md:w-14 md:h-14 rounded-full object-cover border-2 border-primary/10" loading="lazy" width="56" height="56" />
               <div>
                 <h4 className="text-sm md:text-lg font-black text-gray-900 leading-tight">{t.name}</h4>
                 <p className="text-[8px] md:text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t.role}</p>
@@ -386,7 +391,7 @@ const App = () => {
     id: '1', site_name: DEFAULT_NAME, tagline: 'PREMIUM FREELANCE STUDIO', logo_url: '', 
     whatsapp_number: DEFAULT_WA, contact_phone: '+91 95212 07156', contact_email: 'riddhaanleo@gmail.com',
     address: 'India', instagram_url: '#', twitter_url: '#', linkedin_url: '#', footer_text: '',
-    seo_description: 'Premium hand-crafted websites designed specifically for Indian startups and professionals.'
+    seo_description: 'I create modern, fast, responsive, and SEO optimized websites and applications that help businesses grow online.'
   });
   
   const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /adminpanel
+
+# Change 'yourdomain.com' to your actual custom domain when pointed to custom domain
+Sitemap: https://yourdomain.com/sitemap.xml
