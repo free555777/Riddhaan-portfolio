@@ -135,8 +135,7 @@ const Hero = ({ settings }: { settings: SiteSettings }) => {
           <div className="inline-flex items-center py-1.5 md:py-2 px-4 md:px-6 rounded-full bg-white/50 backdrop-blur-md border border-white/80 text-blue-700 text-[9px] md:text-xs font-black mb-6 md:mb-10 shadow-sm uppercase tracking-widest">
             ✨ {settings.tagline}
           </div>
-          <h1 className="sr-only">Full Stack Web Developer  SEO Optimized Websites</h1>
-          <div className="text-5xl sm:text-7xl md:text-9xl font-black text-gray-900 leading-[1.05] md:leading-[0.9] mb-6 md:mb-10 tracking-tighter" aria-hidden="true">
+          <div className="text-5xl sm:text-7xl md:text-9xl font-black text-gray-900 leading-[1.05] md:leading-[0.9] mb-6 md:mb-10 tracking-tighter">
             Design. Develop. <br className="hidden sm:block" />
             <span className="text-primary italic">Deploy.</span>
           </div>
