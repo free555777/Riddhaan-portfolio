@@ -24,6 +24,11 @@ const Navbar: React.FC<NavbarProps> = ({ settings }) => {
     e.preventDefault();
     setIsOpen(false);
     
+    if (id === 'blog') {
+      window.location.hash = '#blog';
+      return;
+    }
+
     const element = document.getElementById(id);
     if (element) {
       const offset = 80;
@@ -36,6 +41,20 @@ const Navbar: React.FC<NavbarProps> = ({ settings }) => {
         top: offsetPosition,
         behavior: 'smooth'
       });
+    } else {
+      // If element is missing (e.g. we are on the Blog page), change hash and wait for render
+      window.location.hash = `#${id}`;
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) {
+          const o = 80;
+          const br = document.body.getBoundingClientRect().top;
+          const er = el.getBoundingClientRect().top;
+          const ep = er - br;
+          const op = ep - o;
+          window.scrollTo({ top: op, behavior: 'smooth' });
+        }
+      }, 150);
     }
   };
 
@@ -46,7 +65,11 @@ const Navbar: React.FC<NavbarProps> = ({ settings }) => {
           className="cursor-pointer select-none flex items-center group" 
           onClick={() => {
             setIsOpen(false);
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            if (window.location.hash.startsWith('#blog')) {
+              window.location.hash = '';
+            } else {
+              window.scrollTo({top: 0, behavior: 'smooth'});
+            }
           }}
         >
           {settings?.logo_url ? (
@@ -61,7 +84,7 @@ const Navbar: React.FC<NavbarProps> = ({ settings }) => {
 
         {/* Desktop Menu */}
         <div className="hidden lg:flex items-center space-x-8">
-          {['home', 'about', 'services', 'portfolio', 'pricing'].map(id => (
+          {['home', 'about', 'services', 'portfolio', 'pricing', 'blog'].map(id => (
             <a 
               key={id} 
               href={`#${id}`} 
@@ -93,7 +116,7 @@ const Navbar: React.FC<NavbarProps> = ({ settings }) => {
               className="lg:hidden absolute top-full left-0 w-full bg-white shadow-2xl border-t border-gray-100 overflow-hidden z-[101]"
             >
               <div className="flex flex-col p-6 space-y-2">
-                {['home', 'about', 'services', 'portfolio', 'pricing'].map(id => (
+                {['home', 'about', 'services', 'portfolio', 'pricing', 'blog'].map(id => (
                   <a 
                     key={id} 
                     href={`#${id}`} 

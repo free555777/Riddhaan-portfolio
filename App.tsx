@@ -15,16 +15,18 @@ import PricingTable from './components/PricingTable.tsx';
 import FAQ from './components/FAQ.tsx';
 import Footer from './components/Footer.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
+import Blog from './components/Blog.tsx';
 import { 
   PRICING_PLANS as DEFAULT_PRICING, 
   SERVICES as DEFAULT_SERVICES, 
   PORTFOLIO_ITEMS as DEFAULT_PORTFOLIO, 
   TESTIMONIALS as DEFAULT_TESTIMONIALS,
   SITE_NAME as DEFAULT_NAME, 
-  WHATSAPP_NUMBER as DEFAULT_WA 
+  WHATSAPP_NUMBER as DEFAULT_WA,
+  DEFAULT_BLOG_POSTS
 } from './constants.ts';
 import * as db from './services/supabase.ts';
-import { SiteSettings, PricingPlan, Service, Project, Testimonial } from './types.ts';
+import { SiteSettings, PricingPlan, Service, Project, Testimonial, BlogPost } from './types.ts';
 
 // --- ICON MAPPER ---
 const IconMap: Record<string, React.ReactNode> = {
@@ -430,6 +432,17 @@ const getInitialTestimonials = (): Testimonial[] => {
   return DEFAULT_TESTIMONIALS;
 };
 
+const getInitialBlogPosts = (): BlogPost[] => {
+  try {
+    const cached = localStorage.getItem('riddhaan_db_blog_posts');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return DEFAULT_BLOG_POSTS;
+};
+
 const App = () => {
   // We initialize as loading false because we already have valid content cached/constant-loaded instantly.
   const [loading, setLoading] = useState(false);
@@ -440,6 +453,7 @@ const App = () => {
   const [services, setServices] = useState<Service[]>(getInitialServices);
   const [portfolio, setPortfolio] = useState<Project[]>(getInitialPortfolio);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(getInitialTestimonials);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(getInitialBlogPosts);
 
   useEffect(() => {
     const handleHash = () => setHash(window.location.hash);
@@ -447,11 +461,12 @@ const App = () => {
     
     const init = async () => {
       try {
-        const [s, sv, pt, t] = await Promise.all([
+        const [s, sv, pt, t, bp] = await Promise.all([
           db.getSiteSettings(), 
           db.getServices(), 
           db.getPortfolio(), 
-          db.getTestimonials()
+          db.getTestimonials(),
+          db.getBlogPosts()
         ]);
         
         if (s) setSettings(s);
@@ -460,6 +475,7 @@ const App = () => {
         if (sv && sv.length) setServices(sv);
         if (pt && pt.length) setPortfolio(pt);
         if (t && t.length) setTestimonials(t);
+        if (bp && bp.length) setBlogPosts(bp);
         
       } catch (err) {
         console.warn("Using local fallbacks in background.", err);
@@ -500,6 +516,21 @@ const App = () => {
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-12 h-12 text-primary animate-spin" /></div>;
 
   if (hash === '#admin' || window.location.pathname === '/admin') return <AdminPanel />;
+
+  if (hash === '#blog' || hash.startsWith('#blog-')) {
+    const slug = hash.startsWith('#blog-') ? hash.substring(6) : undefined;
+    return (
+      <div className="antialiased selection:bg-primary selection:text-white bg-gray-50">
+        <Navbar settings={settings} />
+        <Blog 
+          posts={blogPosts}
+          currentSlug={slug}
+          onBackToHome={() => { window.location.hash = ''; }}
+        />
+        <Footer settings={settings} />
+      </div>
+    );
+  }
 
   return (
     <div className="antialiased selection:bg-primary selection:text-white">

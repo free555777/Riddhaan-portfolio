@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { SiteSettings, PricingPlan, Service, Project, Testimonial, Inquiry, FAQItem } from '../types';
+import { SiteSettings, PricingPlan, Service, Project, Testimonial, Inquiry, FAQItem, BlogPost } from '../types';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://gajyeusnyawrpdcjveov.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_5TufyblCS0IUUvxA_OqB5g_iDnarZpp';
@@ -148,6 +148,30 @@ export const submitInquiry = async (formData: any) => {
   const { error } = await supabase.from('inquiries').insert([formData]);
   return !error;
 };
+
+// --- BLOG POST CRUD SERVICES ---
+export const getBlogPosts = () => handleRequest('blog_posts', async () => await supabase!.from('blog_posts').select('*').order('published_at', { ascending: false }), []);
+export const upsertBlogPost = async (post: Partial<BlogPost>) => {
+  const localItem = localDB.upsertItem('blog_posts', post);
+  if (!supabase) return { success: true, cloud: false };
+  try {
+    const isNew = String(localItem.id).startsWith('local_');
+    const toSync = { ...localItem };
+    if (isNew) toSync.id = `post_${Date.now()}`;
+    const { data, error } = await supabase.from('blog_posts').upsert(toSync).select();
+    if (error) return { success: true, cloud: false, error: error.message };
+    if (data?.[0]) {
+      if (isNew) localDB.removeItem('blog_posts', localItem.id);
+      localDB.upsertItem('blog_posts', data[0]);
+    }
+    return { success: true, cloud: true };
+  } catch (err: any) { return { success: true, cloud: false, error: err.message }; }
+};
+export const deleteBlogPost = async (id: string) => {
+  localDB.removeItem('blog_posts', id);
+  if (supabase) await supabase.from('blog_posts').delete().eq('id', id);
+};
+
 
 // --- REAL AUTHENTICATION ---
 export const adminLogin = async (email: string, pass: string) => {

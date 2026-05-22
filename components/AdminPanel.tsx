@@ -4,14 +4,15 @@ import {
   Lock, LogOut, MessageSquare, Trash2, 
   Loader2, BarChart3, Mail, Phone, 
   Layout, Briefcase, Star, Settings, 
-  Plus, Edit, Save, X, Globe, Eye, TrendingUp, Users, HelpCircle, ExternalLink, CloudOff, CloudCheck
+  Plus, Edit, Save, X, Globe, Eye, TrendingUp, Users, HelpCircle, ExternalLink, CloudOff, CloudCheck,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as db from '../services/supabase.ts';
-import { Inquiry, Service, Project, Testimonial, SiteSettings, FAQItem } from '../types.ts';
+import { Inquiry, Service, Project, Testimonial, SiteSettings, FAQItem, BlogPost } from '../types.ts';
 import Button from './Button.tsx';
 
-type Tab = 'dashboard' | 'inquiries' | 'services' | 'portfolio' | 'testimonials' | 'faqs' | 'settings';
+type Tab = 'dashboard' | 'inquiries' | 'services' | 'portfolio' | 'testimonials' | 'faqs' | 'settings' | 'blog';
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -28,6 +29,7 @@ const AdminPanel = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
@@ -48,13 +50,14 @@ const AdminPanel = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [inq, serv, port, test, fqs, sett] = await Promise.all([
+      const [inq, serv, port, test, fqs, sett, bp] = await Promise.all([
         db.getInquiries(),
         db.getServices(),
         db.getPortfolio(),
         db.getTestimonials(),
         db.getFAQs(),
-        db.getSiteSettings()
+        db.getSiteSettings(),
+        db.getBlogPosts()
       ]);
       setInquiries(inq || []);
       setServices(serv || []);
@@ -62,6 +65,7 @@ const AdminPanel = () => {
       setTestimonials(test || []);
       setFaqs(fqs || []);
       setSettings(sett);
+      setBlogPosts(bp || []);
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
@@ -109,6 +113,7 @@ const AdminPanel = () => {
       else if (type === 'testimonials') res = await db.upsertTestimonial(data);
       else if (type === 'faqs') res = await db.upsertFAQ(data);
       else if (type === 'settings') res = await db.updateSiteSettings(data);
+      else if (type === 'blog') res = await db.upsertBlogPost(data);
       
       if (res && res.error) {
         alert(`Cloud Sync Error: ${res.error}`);
@@ -132,6 +137,7 @@ const AdminPanel = () => {
       else if (type === 'portfolio') await db.deleteProject(id);
       else if (type === 'testimonials') await db.deleteTestimonial(id);
       else if (type === 'faqs') await db.deleteFAQ(id);
+      else if (type === 'blog') await db.deleteBlogPost(id);
       await fetchAllData();
     } catch (err) {
       alert("Delete failed.");
@@ -203,6 +209,7 @@ const AdminPanel = () => {
             { id: 'portfolio', icon: Briefcase, label: 'Portfolio' },
             { id: 'testimonials', icon: Star, label: 'Reviews' },
             { id: 'faqs', icon: HelpCircle, label: 'FAQs' },
+            { id: 'blog', icon: BookOpen, label: 'Blog Posts' },
             { id: 'settings', icon: Settings, label: 'Settings' },
           ].map((item) => (
             <button key={item.id} onClick={() => setActiveTab(item.id as Tab)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all ${activeTab === item.id ? 'bg-primary text-white shadow-xl shadow-blue-200' : 'text-gray-400 hover:bg-gray-50'}`}>
@@ -224,7 +231,7 @@ const AdminPanel = () => {
               <h2 className="text-4xl font-black text-gray-900 tracking-tight capitalize">{activeTab}</h2>
               <p className="text-gray-500 font-bold text-xs uppercase tracking-widest mt-1">Management Console</p>
             </div>
-            {['services', 'portfolio', 'testimonials', 'faqs'].includes(activeTab) && (
+            {['services', 'portfolio', 'testimonials', 'faqs', 'blog'].includes(activeTab) && (
               <Button size="sm" className="rounded-xl flex items-center gap-2 shadow-blue-100" onClick={() => setEditingItem({})}>
                 <Plus size={16} /> ADD ENTRY
               </Button>
@@ -235,10 +242,11 @@ const AdminPanel = () => {
             <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
               
               {activeTab === 'dashboard' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                   {[
                     { label: 'Total Inquiries', val: inquiries.length, icon: MessageSquare, color: 'text-amber-600', bg: 'bg-amber-50' },
                     { label: 'Live Projects', val: projects.length, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: 'Blog Articles', val: blogPosts.length, icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-50' },
                     { label: 'Services', val: services.length, icon: Layout, color: 'text-purple-600', bg: 'bg-purple-50' },
                     { label: 'Reviews', val: testimonials.length, icon: Star, color: 'text-green-600', bg: 'bg-green-50' },
                   ].map(stat => (
@@ -362,6 +370,59 @@ const AdminPanel = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {activeTab === 'blog' && (
+                <div className="space-y-6">
+                  {blogPosts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {blogPosts.map(post => (
+                        <div key={post.id} className="bg-white rounded-[40px] overflow-hidden border border-gray-100 group shadow-sm hover:shadow-xl transition-all relative">
+                          <CloudStatus id={post.id} />
+                          <div className="h-48 relative bg-gray-50 flex items-center justify-center overflow-hidden">
+                            {post.cover_image ? (
+                              <img src={post.cover_image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={post.title} />
+                            ) : (
+                              <BookOpen size={48} className="text-gray-300" />
+                            )}
+                            <div className="absolute top-4 left-4 flex gap-2">
+                              <span className="bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest text-primary shadow-sm">
+                                {post.category}
+                              </span>
+                              <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${post.status === 'published' ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}>
+                                {post.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="p-8">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                              {post.published_at} • {post.read_time || '5 min read'}
+                            </span>
+                            <h3 className="text-xl font-black mt-2 mb-4 text-gray-900 leading-tight line-clamp-2" title={post.title}>
+                              {post.title}
+                            </h3>
+                            <p className="text-gray-500 text-xs font-semibold leading-relaxed line-clamp-3 mb-6">
+                              {post.excerpt}
+                            </p>
+                            <div className="flex gap-3">
+                              <button onClick={() => setEditingItem(post)} className="flex-1 flex items-center justify-center gap-2 p-4 bg-gray-50 text-gray-900 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-blue-50 hover:text-primary transition-all">
+                                <Edit size={16} /> EDIT ARTICLE
+                              </button>
+                              <button onClick={() => handleDelete('blog', post.id!)} className="p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-all">
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-20 bg-white rounded-[40px] border border-dashed border-gray-200">
+                      <BookOpen className="mx-auto text-gray-200 mb-4" size={48} />
+                      <p className="text-gray-400 font-black uppercase tracking-widest text-xs">No blog articles found. Start publishing!</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -509,6 +570,78 @@ const AdminPanel = () => {
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Official Answer</label>
                     <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-40 outline-none resize-none font-bold" value={editingItem.answer || ''} onChange={e => setEditingItem({...editingItem, answer: e.target.value})} />
+                  </div>
+                </>
+              )}
+              {activeTab === 'blog' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Article Title</label>
+                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.title || ''} onChange={e => {
+                        const title = e.target.value;
+                        const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                        setEditingItem({
+                          ...editingItem,
+                          title,
+                          slug: editingItem.slug ? editingItem.slug : slug
+                        });
+                      }} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">URL Slug</label>
+                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold select-all" placeholder="my-awesome-pwa-guide" value={editingItem.slug || ''} onChange={e => setEditingItem({...editingItem, slug: e.target.value})} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Category</label>
+                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="SEO, Business, Web Dev" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Read Time (e.g., '6 min read')</label>
+                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="6 min read" value={editingItem.read_time || '5 min read'} onChange={e => setEditingItem({...editingItem, read_time: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Status</label>
+                      <select required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-sm" value={editingItem.status || 'published'} onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}>
+                        <option value="published">Published</option>
+                        <option value="draft">Draft / Private</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Cover Image URL</label>
+                      <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="https://images.unsplash.com/..." value={editingItem.cover_image || ''} onChange={e => setEditingItem({...editingItem, cover_image: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Publication Date (YYYY-MM-DD)</label>
+                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder={new Date().toISOString().split('T')[0]} value={editingItem.published_at || new Date().toISOString().split('T')[0]} onChange={e => setEditingItem({...editingItem, published_at: e.target.value})} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Brief Excerpt/Mini Description</label>
+                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="A compelling 2-sentence summary that appears in search indexes and card lists." value={editingItem.excerpt || ''} onChange={e => setEditingItem({...editingItem, excerpt: e.target.value})} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">SEO Meta Title (Optional)</label>
+                      <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="Optimized target keyword title" value={editingItem.meta_title || ''} onChange={e => setEditingItem({...editingItem, meta_title: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">SEO Meta Description (Optional)</label>
+                      <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="Human readable mini advert" value={editingItem.meta_description || ''} onChange={e => setEditingItem({...editingItem, meta_description: e.target.value})} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Article Body (Supports Markdown formatting)</label>
+                    <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-80 outline-none resize-none font-mono text-sm leading-relaxed" placeholder="## Welcome to my Blog post&#10;Write clean copy naturally with human readers in mind. Use lists, bold text, and subtitles." value={editingItem.content || ''} onChange={e => setEditingItem({...editingItem, content: e.target.value})} />
                   </div>
                 </>
               )}
