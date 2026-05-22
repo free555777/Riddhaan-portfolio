@@ -433,13 +433,6 @@ const getInitialTestimonials = (): Testimonial[] => {
 };
 
 const getInitialBlogPosts = (): BlogPost[] => {
-  try {
-    const cached = localStorage.getItem('riddhaan_db_blog_posts');
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {}
   return DEFAULT_BLOG_POSTS;
 };
 
@@ -453,7 +446,7 @@ const App = () => {
   const [services, setServices] = useState<Service[]>(getInitialServices);
   const [portfolio, setPortfolio] = useState<Project[]>(getInitialPortfolio);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(getInitialTestimonials);
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(getInitialBlogPosts);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(DEFAULT_BLOG_POSTS);
 
   useEffect(() => {
     const handleHash = () => setHash(window.location.hash);
@@ -461,12 +454,11 @@ const App = () => {
     
     const init = async () => {
       try {
-        const [s, sv, pt, t, bp] = await Promise.all([
+        const [s, sv, pt, t] = await Promise.all([
           db.getSiteSettings(), 
           db.getServices(), 
           db.getPortfolio(), 
-          db.getTestimonials(),
-          db.getBlogPosts()
+          db.getTestimonials()
         ]);
         
         if (s) setSettings(s);
@@ -475,7 +467,6 @@ const App = () => {
         if (sv && sv.length) setServices(sv);
         if (pt && pt.length) setPortfolio(pt);
         if (t && t.length) setTestimonials(t);
-        if (bp && bp.length) setBlogPosts(bp);
         
       } catch (err) {
         console.warn("Using local fallbacks in background.", err);

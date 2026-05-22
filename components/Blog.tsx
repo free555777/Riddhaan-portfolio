@@ -108,6 +108,69 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   );
 };
 
+
+// Calculates edit distance between two strings (Levenshtein distance)
+const getLevenshteinDistance = (a: string, b: string): number => {
+  const tmp: number[][] = [];
+  const alen = a.length;
+  const blen = b.length;
+  if (alen === 0) return blen;
+  if (blen === 0) return alen;
+  for (let i = 0; i <= alen; i++) {
+    tmp[i] = [i];
+  }
+  for (let j = 0; j <= blen; j++) {
+    tmp[0][j] = j;
+  }
+  for (let i = 1; i <= alen; i++) {
+    for (let j = 1; j <= blen; j++) {
+      tmp[i][j] = Math.min(
+        tmp[i - 1][j] + 1,
+        tmp[i][j - 1] + 1,
+        tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return tmp[alen][blen];
+};
+
+// Checks if search query is a spelling-tolerant match for target values
+const matchesFuzzySearch = (targets: string[], query: string): boolean => {
+  const cleanQuery = query.toLowerCase().trim();
+  if (!cleanQuery) return true;
+
+  const queryWords = cleanQuery.split(/\s+/).filter(w => w.length > 0);
+  if (queryWords.length === 0) return true;
+
+  const normalizedTargets = targets.map(t => (t || '').toLowerCase().trim());
+  
+  // Extract individual words from all targets to run edit-distance checklist
+  const targetWords = normalizedTargets
+    .flatMap(t => t.split(/[^a-z0-9_\u0900-\u097F]+/).filter(w => w.length > 1));
+
+  return queryWords.every(qWord => {
+    // 1. Direct matching or substring inclusion checks
+    if (normalizedTargets.some(target => target.includes(qWord))) {
+      return true;
+    }
+
+    // 2. Fuzzy match checks for spelling mistakes based on words
+    if (qWord.length >= 3) {
+      const maxDistanceAllowed = qWord.length <= 4 ? 1 : 2;
+      for (const tWord of targetWords) {
+        if (Math.abs(tWord.length - qWord.length) <= maxDistanceAllowed) {
+          const dist = getLevenshteinDistance(qWord, tWord);
+          if (dist <= maxDistanceAllowed) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  });
+};
+
 const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -120,9 +183,14 @@ const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
 
   // Filtering matching searches & categories
   const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          post.content.toLowerCase().includes(searchTerm.toLowerCase());
+    const targets = [
+      post.title,
+      post.excerpt,
+      post.content,
+      post.category,
+      ...(post.tags || [])
+    ];
+    const matchesSearch = matchesFuzzySearch(targets, searchTerm);
     const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory;
     return matchesSearch && matchesCategory && post.status === 'published';
   });
@@ -245,15 +313,22 @@ const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
         {/* Dynamic Filters & Search Panel */}
         <div className="bg-white rounded-2xl border border-gray-150 p-6 mb-12 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
           {/* Search box */}
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Search articles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition"
-            />
+          <div className="w-full md:max-w-md flex flex-col gap-1.5">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text"
+                placeholder="Search articles..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition"
+              />
+            </div>
+            {searchTerm.trim().length > 0 && (
+              <span className="text-[10px] text-blue-650 font-extrabold ml-1 flex items-center gap-1 uppercase tracking-widest animate-pulse">
+                <span className="text-amber-500">⚡</span> Smart Spelling Tolerance Active
+              </span>
+            )}
           </div>
 
           {/* Categories select tags */}

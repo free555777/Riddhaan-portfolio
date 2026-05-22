@@ -10,9 +10,47 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import * as db from '../services/supabase.ts';
 import { Inquiry, Service, Project, Testimonial, SiteSettings, FAQItem, BlogPost } from '../types.ts';
+import { DEFAULT_BLOG_POSTS } from '../constants.ts';
 import Button from './Button.tsx';
 
 type Tab = 'dashboard' | 'inquiries' | 'services' | 'portfolio' | 'testimonials' | 'faqs' | 'settings' | 'blog';
+
+const generateAllBlogPostsTS = (allPosts: BlogPost[], updatedPost: BlogPost) => {
+  let list = [...allPosts];
+  const postToSave = { ...updatedPost };
+  if (!postToSave.id) {
+    postToSave.id = 'blog_' + Date.now();
+  }
+  
+  const idx = list.findIndex(p => p.id === postToSave.id);
+  if (idx !== -1) {
+    list[idx] = postToSave;
+  } else {
+    list.push(postToSave);
+  }
+
+  const postsTS = list.map(post => {
+    const slug = post.slug || (post.title ? post.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '');
+    const tags = post.tags && post.tags.length ? post.tags : [post.category || 'Web Development'];
+    return `  {
+    id: ${JSON.stringify(post.id)},
+    title: ${JSON.stringify(post.title || '')},
+    slug: ${JSON.stringify(slug)},
+    excerpt: ${JSON.stringify(post.excerpt || '')},
+    cover_image: ${JSON.stringify(post.cover_image || '')},
+    category: ${JSON.stringify(post.category || '')},
+    tags: ${JSON.stringify(tags)},
+    read_time: ${JSON.stringify(post.read_time || '5 min read')},
+    published_at: ${JSON.stringify(post.published_at || new Date().toISOString().split('T')[0])},
+    status: ${JSON.stringify(post.status || 'published')},
+    meta_title: ${JSON.stringify(post.meta_title || '')},
+    meta_description: ${JSON.stringify(post.meta_description || '')},
+    content: \`${(post.content || '').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`
+  }`;
+  }).join(',\n');
+
+  return `export const DEFAULT_BLOG_POSTS: BlogPost[] = [\n${postsTS}\n];`;
+};
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -22,6 +60,8 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [successNotice, setSuccessNotice] = useState('');
 
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -32,6 +72,8 @@ const AdminPanel = () => {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
 
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [showBlogCodeSnippet, setShowBlogCodeSnippet] = useState<boolean>(false);
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
   useEffect(() => {
     checkAuth();
@@ -50,14 +92,13 @@ const AdminPanel = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [inq, serv, port, test, fqs, sett, bp] = await Promise.all([
+      const [inq, serv, port, test, fqs, sett] = await Promise.all([
         db.getInquiries(),
         db.getServices(),
         db.getPortfolio(),
         db.getTestimonials(),
         db.getFAQs(),
-        db.getSiteSettings(),
-        db.getBlogPosts()
+        db.getSiteSettings()
       ]);
       setInquiries(inq || []);
       setServices(serv || []);
@@ -65,7 +106,7 @@ const AdminPanel = () => {
       setTestimonials(test || []);
       setFaqs(fqs || []);
       setSettings(sett);
-      setBlogPosts(bp || []);
+      setBlogPosts(DEFAULT_BLOG_POSTS);
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
@@ -77,22 +118,40 @@ const AdminPanel = () => {
     e.preventDefault();
     setSaveLoading(true);
     setError('');
+    setSuccessNotice('');
     
-    // Attempt real login
-    const res = await db.adminLogin(email, password);
-    
-    if (res.success) {
-      setIsLogged(true);
-      await fetchAllData();
-    } else {
-      // Better error messaging
-      const errMsg = res.error?.toLowerCase();
-      if (errMsg?.includes('invalid login credentials')) {
-        setError("Account not found. Please create the user in Supabase Auth tab.");
-      } else if (errMsg?.includes('email not confirmed')) {
-        setError("Email confirmation required. Disable 'Confirm Email' in Supabase Settings.");
+    if (isSignUp) {
+      // Attempt registration
+      const res = await db.adminSignUp(email, password);
+      if (res.success) {
+        if (res.session) {
+          setIsLogged(true);
+          await fetchAllData();
+          setSuccessNotice("Account created and logged in!");
+        } else {
+          setSuccessNotice("Account registered successfully! If you are required to confirm your email, please check your inbox (or check spam). Otherwise, switch to 'Login' to authorized your session.");
+          setIsSignUp(false);
+        }
       } else {
-        setError(res.error || "Login Failed.");
+        setError(res.error || "Registration failed. Make sure your password has at least 6 characters.");
+      }
+    } else {
+      // Attempt real login
+      const res = await db.adminLogin(email, password);
+      
+      if (res.success) {
+        setIsLogged(true);
+        await fetchAllData();
+      } else {
+        // Better error messaging
+        const errMsg = res.error?.toLowerCase();
+        if (errMsg?.includes('invalid login credentials')) {
+          setError("Incorrect password or Account not found. Try switching to 'Create Account' below if you haven't created one yet.");
+        } else if (errMsg?.includes('email not confirmed')) {
+          setError("Email confirmation is required. Please check your inbox to confirm your address, or disable 'Confirm Email' in Supabase console!");
+        } else {
+          setError(res.error || "Login Failed.");
+        }
       }
     }
     setSaveLoading(false);
@@ -130,6 +189,39 @@ const AdminPanel = () => {
   };
 
   const handleDelete = async (type: Tab, id: string) => {
+    if (type === 'blog') {
+      const confirmed = confirm("This post is static in your code inside '/constants.ts'. To permanently remove it, delete its object inside that file. Would you like to exclude it from your current list and copy the updated TypeScript code array now?");
+      if (confirmed) {
+        const list = blogPosts.filter(p => p.id !== id);
+        setBlogPosts(list);
+        
+        // Generate and copy the code with this post removed
+        const postsTS = list.map(post => {
+          const slug = post.slug || (post.title ? post.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '');
+          const tags = post.tags && post.tags.length ? post.tags : [post.category || 'Web Development'];
+          return `  {
+    id: ${JSON.stringify(post.id)},
+    title: ${JSON.stringify(post.title || '')},
+    slug: ${JSON.stringify(slug)},
+    excerpt: ${JSON.stringify(post.excerpt || '')},
+    cover_image: ${JSON.stringify(post.cover_image || '')},
+    category: ${JSON.stringify(post.category || '')},
+    tags: ${JSON.stringify(tags)},
+    read_time: ${JSON.stringify(post.read_time || '5 min read')},
+    published_at: ${JSON.stringify(post.published_at || new Date().toISOString().split('T')[0])},
+    status: ${JSON.stringify(post.status || 'published')},
+    meta_title: ${JSON.stringify(post.meta_title || '')},
+    meta_description: ${JSON.stringify(post.meta_description || '')},
+    content: \`${(post.content || '').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`
+  }`;
+        }).join(',\n');
+        const code = `export const DEFAULT_BLOG_POSTS: BlogPost[] = [\n${postsTS}\n];`;
+        navigator.clipboard.writeText(code);
+        alert("Success! The updated array (with this article removed) has been copied to your clipboard. Open '/constants.ts' and replace the DEFAULT_BLOG_POSTS declaration with it!");
+      }
+      return;
+    }
+
     if (!confirm("Confirm permanent deletion? This cannot be undone.")) return;
     try {
       if (type === 'inquiries') await db.deleteInquiry(id);
@@ -137,7 +229,6 @@ const AdminPanel = () => {
       else if (type === 'portfolio') await db.deleteProject(id);
       else if (type === 'testimonials') await db.deleteTestimonial(id);
       else if (type === 'faqs') await db.deleteFAQ(id);
-      else if (type === 'blog') await db.deleteBlogPost(id);
       await fetchAllData();
     } catch (err) {
       alert("Delete failed.");
@@ -153,8 +244,12 @@ const AdminPanel = () => {
       <div className="min-h-screen bg-[#F1F5F9] flex items-center justify-center p-4">
         <div className="bg-white rounded-[32px] p-10 max-w-md w-full shadow-2xl border border-gray-100">
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6"><Lock className="text-primary" size={32} /></div>
-          <h2 className="text-3xl font-black text-center mb-2 tracking-tight">ADMIN <span className="text-primary">LOGIN</span></h2>
-          <p className="text-center text-gray-500 text-xs font-bold uppercase tracking-widest mb-8">Official Access Only</p>
+          <h2 className="text-2xl font-black text-center mb-2 tracking-tight">
+            ADMIN <span className="text-primary">{isSignUp ? 'REGISTER' : 'LOGIN'}</span>
+          </h2>
+          <p className="text-center text-gray-500 text-xs font-bold uppercase tracking-widest mb-8">
+            {isSignUp ? 'Create New Admin Credentials' : 'Official Access Only'}
+          </p>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Account Email</label>
@@ -171,13 +266,31 @@ const AdminPanel = () => {
                 </p>
               </div>
             )}
+            {successNotice && (
+              <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                <p className="text-emerald-600 text-[10px] font-black text-center uppercase tracking-widest leading-relaxed">
+                  {successNotice}
+                </p>
+              </div>
+            )}
             <Button fullWidth disabled={saveLoading} className="rounded-2xl py-4 h-14 mt-4">
-              {saveLoading ? <Loader2 className="animate-spin" /> : 'AUTHORIZE SESSION'}
+              {saveLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? 'CREATE ACCOUNT' : 'AUTHORIZE SESSION')}
             </Button>
           </form>
           <div className="mt-8 pt-8 border-t border-gray-50">
-            <p className="text-[9px] text-gray-400 text-center uppercase font-black tracking-widest">
-              Don't have an account? Create one in <br/> Supabase Dashboard &gt; Auth &gt; Users
+            <button 
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError('');
+                setSuccessNotice('');
+              }}
+              className="w-full text-[10px] text-primary hover:underline text-center uppercase font-black tracking-widest block"
+            >
+              {isSignUp ? 'Already have an account? Back to Login' : "Don't have an admin account? Register one here!"}
+            </button>
+            <p className="text-[8px] text-gray-400 text-center uppercase font-bold tracking-wider mt-4 leading-relaxed">
+              Note: If registration succeeds but log in fails, make sure "Confirm Email" is turned off in your Supabase Auth Providers settings.
             </p>
           </div>
         </div>
@@ -375,6 +488,19 @@ const AdminPanel = () => {
 
               {activeTab === 'blog' && (
                 <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-6 rounded-[32px] flex items-start gap-4 shadow-sm">
+                    <div className="p-3.5 bg-primary rounded-2xl text-white shadow-md shadow-blue-100">
+                      <BookOpen size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-gray-900 uppercase text-xs tracking-wider mb-1">Static Code-First Blog Enabled ⚡</h4>
+                      <p className="text-gray-600 text-xs leading-relaxed font-semibold">
+                        Your articles are maintained directly in the code component (inside the <code className="bg-white px-2 py-0.5 rounded border border-blue-200 text-primary font-mono font-bold">/constants.ts</code> file) for lightning-fast speeds, zero hosting costs, and superior search engine optimization. 
+                        Use the <strong>"ADD ENTRY"</strong> or <strong>"EDIT ARTICLE"</strong> buttons to draft and format posts in our clean UI, then click <strong>"GENERATE CODE SNIPPET"</strong> to instantly render and copy the updated TypeScript structure which you can paste straight into your code!
+                      </p>
+                    </div>
+                  </div>
+
                   {blogPosts.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {blogPosts.map(post => (
@@ -488,10 +614,19 @@ const AdminPanel = () => {
       {editingItem && (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="bg-white rounded-[48px] w-full max-w-2xl p-10 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
-            <button onClick={() => setEditingItem(null)} className="absolute top-10 right-10 text-gray-400 hover:text-gray-900 transition-colors"><X size={32} /></button>
-            <h3 className="text-4xl font-black mb-10 tracking-tight uppercase">Update <span className="text-primary">{activeTab.slice(0,-1)}</span></h3>
+            <button onClick={() => { setEditingItem(null); setShowBlogCodeSnippet(false); setCopiedCode(false); }} className="absolute top-10 right-10 text-gray-400 hover:text-gray-900 transition-colors"><X size={32} /></button>
+            <h3 className="text-4xl font-black mb-10 tracking-tight uppercase">
+              {activeTab === 'blog' && showBlogCodeSnippet ? 'Generated Code' : 'Update'} <span className="text-primary">{activeTab.slice(0,-1)}</span>
+            </h3>
             
-            <form onSubmit={(e) => { e.preventDefault(); handleUpsert(activeTab, editingItem); }} className="space-y-6">
+            <form onSubmit={(e) => { 
+              e.preventDefault(); 
+              if (activeTab === 'blog') {
+                setShowBlogCodeSnippet(true);
+              } else {
+                handleUpsert(activeTab, editingItem); 
+              }
+            }} className="space-y-6">
               {activeTab === 'portfolio' && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
@@ -574,80 +709,138 @@ const AdminPanel = () => {
                 </>
               )}
               {activeTab === 'blog' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Article Title</label>
-                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.title || ''} onChange={e => {
-                        const title = e.target.value;
-                        const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                        setEditingItem({
-                          ...editingItem,
-                          title,
-                          slug: editingItem.slug ? editingItem.slug : slug
-                        });
-                      }} />
+                showBlogCodeSnippet ? (
+                  <div className="space-y-6 bg-slate-900 text-slate-100 p-8 rounded-[32px] font-mono text-xs overflow-hidden relative">
+                    <div className="flex justify-between items-center text-slate-400 pb-3 mb-4 border-b border-slate-800">
+                      <span>constants.ts CONFIG CONFIGURATION</span>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const blogCode = generateAllBlogPostsTS(blogPosts, editingItem);
+                          navigator.clipboard.writeText(blogCode);
+                          setCopiedCode(true);
+                          setTimeout(() => setCopiedCode(false), 3005);
+                        }}
+                        className="bg-primary hover:bg-sky-500 text-white px-4 py-2 rounded-xl text-xs font-bold font-sans transition-all"
+                      >
+                        {copiedCode ? 'Copied ✅' : 'Copy All Code'}
+                      </button>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">URL Slug</label>
-                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold select-all" placeholder="my-awesome-pwa-guide" value={editingItem.slug || ''} onChange={e => setEditingItem({...editingItem, slug: e.target.value})} />
+                    <p className="text-[10px] text-yellow-400 font-sans leading-relaxed font-bold mb-4">
+                      Instructions: Click "Copy All Code" above, then open "/constants.ts" in your editor, search for "export const DEFAULT_BLOG_POSTS: BlogPost[] = [ ... ]", and paste this newly generated structure in place of it!
+                    </p>
+                    <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap p-4 bg-slate-950 rounded-xl scrollbar-thin text-[11px] leading-relaxed text-slate-300">
+                      {generateAllBlogPostsTS(blogPosts, editingItem)}
+                    </pre>
+                    <div className="flex gap-4 pt-4 font-sans mt-2">
+                      <button 
+                        type="button"
+                        onClick={() => setShowBlogCodeSnippet(false)}
+                        className="flex-1 rounded-2xl py-3.5 text-slate-900 font-bold bg-white hover:bg-slate-100 border border-slate-200 transition-all text-xs"
+                      >
+                        ← Back to Editing Form
+                      </button>
+                      <button 
+                        type="button"
+                        className="flex-1 rounded-2xl py-3.5 text-white font-bold bg-primary hover:bg-opacity-90 transition-all text-xs"
+                        onClick={() => {
+                          const list = [...blogPosts];
+                          const idx = list.findIndex(p => p.id === editingItem.id);
+                          if (idx !== -1) {
+                            list[idx] = editingItem;
+                          } else {
+                            const newPost = { ...editingItem };
+                            if (!newPost.id) newPost.id = 'blog_' + Date.now();
+                            list.push(newPost);
+                          }
+                          setBlogPosts(list);
+                          setEditingItem(null);
+                          setShowBlogCodeSnippet(false);
+                          setCopiedCode(false);
+                        }}
+                      >
+                        Apply Locally & Close
+                      </button>
                     </div>
                   </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Article Title</label>
+                        <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" value={editingItem.title || ''} onChange={e => {
+                          const title = e.target.value;
+                          const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                          setEditingItem({
+                            ...editingItem,
+                            title,
+                            slug: editingItem.slug ? editingItem.slug : slug
+                          });
+                        }} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">URL Slug</label>
+                        <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold select-all" placeholder="my-awesome-pwa-guide" value={editingItem.slug || ''} onChange={e => setEditingItem({...editingItem, slug: e.target.value})} />
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Category</label>
-                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="SEO, Business, Web Dev" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Category</label>
+                        <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="SEO, Business, Web Dev" value={editingItem.category || ''} onChange={e => setEditingItem({...editingItem, category: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Read Time (e.g., '6 min read')</label>
+                        <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="6 min read" value={editingItem.read_time || '5 min read'} onChange={e => setEditingItem({...editingItem, read_time: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Status</label>
+                        <select required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-sm" value={editingItem.status || 'published'} onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}>
+                          <option value="published">Published</option>
+                          <option value="draft">Draft / Private</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Read Time (e.g., '6 min read')</label>
-                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="6 min read" value={editingItem.read_time || '5 min read'} onChange={e => setEditingItem({...editingItem, read_time: e.target.value})} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Status</label>
-                      <select required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-sm" value={editingItem.status || 'published'} onChange={e => setEditingItem({...editingItem, status: e.target.value as any})}>
-                        <option value="published">Published</option>
-                        <option value="draft">Draft / Private</option>
-                      </select>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Cover Image URL</label>
-                      <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="https://images.unsplash.com/..." value={editingItem.cover_image || ''} onChange={e => setEditingItem({...editingItem, cover_image: e.target.value})} />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Cover Image URL</label>
+                        <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="https://images.unsplash.com/..." value={editingItem.cover_image || ''} onChange={e => setEditingItem({...editingItem, cover_image: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Publication Date (YYYY-MM-DD)</label>
+                        <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder={new Date().toISOString().split('T')[0]} value={editingItem.published_at || new Date().toISOString().split('T')[0]} onChange={e => setEditingItem({...editingItem, published_at: e.target.value})} />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Publication Date (YYYY-MM-DD)</label>
-                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder={new Date().toISOString().split('T')[0]} value={editingItem.published_at || new Date().toISOString().split('T')[0]} onChange={e => setEditingItem({...editingItem, published_at: e.target.value})} />
-                    </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Brief Excerpt/Mini Description</label>
-                    <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="A compelling 2-sentence summary that appears in search indexes and card lists." value={editingItem.excerpt || ''} onChange={e => setEditingItem({...editingItem, excerpt: e.target.value})} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">SEO Meta Title (Optional)</label>
-                      <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="Optimized target keyword title" value={editingItem.meta_title || ''} onChange={e => setEditingItem({...editingItem, meta_title: e.target.value})} />
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Brief Excerpt/Mini Description</label>
+                      <input required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold" placeholder="A compelling 2-sentence summary that appears in search indexes and card lists." value={editingItem.excerpt || ''} onChange={e => setEditingItem({...editingItem, excerpt: e.target.value})} />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">SEO Meta Description (Optional)</label>
-                      <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="Human readable mini advert" value={editingItem.meta_description || ''} onChange={e => setEditingItem({...editingItem, meta_description: e.target.value})} />
-                    </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Article Body (Supports Markdown formatting)</label>
-                    <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-80 outline-none resize-none font-mono text-sm leading-relaxed" placeholder="## Welcome to my Blog post&#10;Write clean copy naturally with human readers in mind. Use lists, bold text, and subtitles." value={editingItem.content || ''} onChange={e => setEditingItem({...editingItem, content: e.target.value})} />
-                  </div>
-                </>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">SEO Meta Title (Optional)</label>
+                        <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="Optimized target keyword title" value={editingItem.meta_title || ''} onChange={e => setEditingItem({...editingItem, meta_title: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">SEO Meta Description (Optional)</label>
+                        <input className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-xs" placeholder="Human readable mini advert" value={editingItem.meta_description || ''} onChange={e => setEditingItem({...editingItem, meta_description: e.target.value})} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-4">Article Body (Supports Markdown formatting)</label>
+                      <textarea required className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl h-80 outline-none resize-none font-mono text-sm leading-relaxed" placeholder="## Welcome to my Blog post&#10;Write clean copy naturally with human readers in mind. Use lists, bold text, and subtitles." value={editingItem.content || ''} onChange={e => setEditingItem({...editingItem, content: e.target.value})} />
+                    </div>
+                  </>
+                )
               )}
-              <Button fullWidth className="mt-8 rounded-3xl py-5 shadow-blue-100" disabled={saveLoading}>
-                {saveLoading ? <Loader2 className="animate-spin" /> : 'PUBLISH CHANGES'}
-              </Button>
+              {(!showBlogCodeSnippet || activeTab !== 'blog') && (
+                <Button fullWidth className="mt-8 rounded-3xl py-5 shadow-blue-100" disabled={saveLoading}>
+                  {saveLoading ? <Loader2 className="animate-spin" /> : (activeTab === 'blog' ? 'GENERATE CODE SNIPPET' : 'PUBLISH CHANGES')}
+                </Button>
+              )}
             </form>
           </motion.div>
         </div>

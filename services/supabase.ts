@@ -181,6 +181,13 @@ export const adminLogin = async (email: string, pass: string) => {
   return { success: true };
 };
 
+export const adminSignUp = async (email: string, pass: string) => {
+  if (!supabase) return { success: false, error: "Supabase not connected" };
+  const { data, error } = await supabase.auth.signUp({ email, password: pass });
+  if (error) return { success: false, error: error.message };
+  return { success: true, session: data.session, user: data.user };
+};
+
 export const isAdminLoggedIn = async () => {
   if (!supabase) return false;
   const { data: { session } } = await supabase.auth.getSession();
