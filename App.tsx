@@ -170,6 +170,7 @@ const About = () => (
             alt="Riddhaan - Full Stack Developer Profile Picture" 
             className="rounded-[24px] md:rounded-[40px] shadow-2xl w-full h-full object-cover block hover:scale-[1.01] transition-transform duration-500 ease-out" 
             loading="lazy"
+            decoding="async"
             width="600"
             height="750"
           />
@@ -278,6 +279,7 @@ const ProjectCard: React.FC<{ item: Project, idx: number }> = ({ item, idx }) =>
           className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" 
           alt={`${item.title} - Riddhaan Premium Project Portfolio`} 
           loading="lazy"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/40 to-transparent flex flex-col justify-end p-6 md:p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <h3 className="text-white text-base md:text-2xl font-black mb-1">{item.title}</h3>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, ArrowLeft, Search, Tag, ArrowRight, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BlogPost } from '../types.ts';
@@ -178,6 +178,31 @@ const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
   // Find active article if slug is provided
   const activePost = currentSlug ? posts.find(p => p.slug === currentSlug) : null;
 
+  // Dynamic header synchronization for human & robot engagement
+  useEffect(() => {
+    if (activePost) {
+      document.title = activePost.meta_title || `${activePost.title} | Riddhaan`;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute('content', activePost.meta_description || activePost.excerpt);
+      }
+      const ogDesc = document.querySelector('meta[property="og:description"]');
+      if (ogDesc) {
+        ogDesc.setAttribute('content', activePost.meta_description || activePost.excerpt);
+      }
+      const twitterDesc = document.querySelector('meta[property="twitter:description"]');
+      if (twitterDesc) {
+        twitterDesc.setAttribute('content', activePost.meta_description || activePost.excerpt);
+      }
+    } else {
+      document.title = "Riddhaan | Premium Full Stack Developer & SEO Solutions";
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute('content', "Looking for a seasoned Full Stack Developer? Experience the Riddhaan Portfolio—crafting ultra-fast, modern, and SEO-optimized web engines designed to rank high, load instantly, and turn casual visitors into loyal clients.");
+      }
+    }
+  }, [activePost]);
+
   // Categories extraction
   const categories = ['All', ...Array.from(new Set(posts.map(p => p.category)))];
 
@@ -243,6 +268,8 @@ const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
                   src={activePost.cover_image} 
                   alt={activePost.title} 
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             )}
@@ -367,6 +394,8 @@ const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
                       src={post.cover_image} 
                       alt={post.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute top-4 left-4">
                       <span className="text-[10px] font-black uppercase tracking-wider bg-white/90 backdrop-blur-md text-primary px-3 py-1.5 rounded-lg shadow-sm border border-white/50">
