@@ -442,6 +442,7 @@ const App = () => {
   // We initialize as loading false because we already have valid content cached/constant-loaded instantly.
   const [loading, setLoading] = useState(false);
   const [hash, setHash] = useState(window.location.hash);
+  const [pathname, setPathname] = useState(window.location.pathname);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [settings, setSettings] = useState<SiteSettings>(getInitialSettings);
@@ -451,8 +452,25 @@ const App = () => {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(DEFAULT_BLOG_POSTS);
 
   useEffect(() => {
-    const handleHash = () => setHash(window.location.hash);
-    window.addEventListener('hashchange', handleHash);
+    const handleLocationChange = () => {
+      setHash(window.location.hash);
+      setPathname(window.location.pathname);
+    };
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Intercept History pushes to ensure immediate react router updates
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function(...args) {
+      originalPushState.apply(this, args);
+      handleLocationChange();
+    };
+    
+    const originalReplaceState = window.history.replaceState;
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(this, args);
+      handleLocationChange();
+    };
     
     const init = async () => {
       try {
@@ -476,7 +494,12 @@ const App = () => {
     };
     init();
     
-    return () => window.removeEventListener('hashchange', handleHash);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
   }, []);
 
   const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -508,17 +531,29 @@ const App = () => {
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="w-12 h-12 text-primary animate-spin" /></div>;
 
-  if (hash === '#admin' || window.location.pathname === '/admin') return <AdminPanel />;
+  if (hash === '#admin' || pathname === '/admin') return <AdminPanel />;
 
-  if (hash === '#blog' || hash.startsWith('#blog-')) {
-    const slug = hash.startsWith('#blog-') ? hash.substring(6) : undefined;
+  const isBlog = hash === '#blog' || hash.startsWith('#blog-') || pathname === '/blog' || pathname.startsWith('/blog/');
+  if (isBlog) {
+    let slug: string | undefined = undefined;
+    if (hash.startsWith('#blog-')) {
+      slug = hash.substring(6);
+    } else if (pathname.startsWith('/blog/')) {
+      slug = pathname.substring(6);
+    }
     return (
       <div className="antialiased selection:bg-primary selection:text-white bg-gray-50">
         <Navbar settings={settings} />
         <Blog 
           posts={blogPosts}
           currentSlug={slug}
-          onBackToHome={() => { window.location.hash = ''; }}
+          onBackToHome={() => { 
+            if (window.location.pathname !== '/') {
+              window.history.pushState({}, '', '/');
+              setPathname('/');
+            }
+            window.location.hash = ''; 
+          }}
         />
         <Footer settings={settings} />
       </div>
