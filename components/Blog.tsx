@@ -181,7 +181,7 @@ const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
   // Dynamic header synchronization for human & robot engagement
   useEffect(() => {
     if (activePost) {
-      document.title = activePost.meta_title || `${activePost.title} | Riddhaan`;
+      document.title = activePost.meta_title || `${activePost.title} | Riddhaan Portfolio`;
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc) {
         metaDesc.setAttribute('content', activePost.meta_description || activePost.excerpt);
@@ -195,7 +195,7 @@ const Blog: React.FC<BlogProps> = ({ posts, onBackToHome, currentSlug }) => {
         twitterDesc.setAttribute('content', activePost.meta_description || activePost.excerpt);
       }
     } else {
-      document.title = "Riddhaan | Premium Full Stack Developer & SEO Solutions";
+      document.title = "Riddhaan Portfolio | Premium Full Stack Developer & SEO Solutions";
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc) {
         metaDesc.setAttribute('content', "Looking for a seasoned Full Stack Developer? Experience the Riddhaan Portfolio—crafting ultra-fast, modern, and SEO-optimized web engines designed to rank high, load instantly, and turn casual visitors into loyal clients.");
