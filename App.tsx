@@ -169,7 +169,7 @@ const About = () => (
             src="https://i.postimg.cc/g0Q0Zb5y/b-jowline-visible-kro.jpg" 
             alt="Riddhaan - Full Stack Developer Profile Picture" 
             className="rounded-[24px] md:rounded-[40px] shadow-2xl w-full h-full object-cover block hover:scale-[1.01] transition-transform duration-500 ease-out" 
-            loading="lazy"
+            fetchPriority="high"
             decoding="async"
             width="600"
             height="750"
