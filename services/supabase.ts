@@ -91,7 +91,28 @@ export const deleteService = async (id: string) => {
   if (supabase) await supabase.from('services').delete().eq('id', id);
 };
 
-export const getPortfolio = () => handleRequest('portfolio', async () => await supabase!.from('portfolio').select('*').order('created_at', { ascending: false }), []);
+export const getPortfolio = async () => {
+  const data = await handleRequest('portfolio', async () => {
+    try {
+      const res = await supabase!.from('portfolio').select('*').order('created_at', { ascending: false });
+      if (res.error && (res.error.code === 'PGRST100' || res.error.message?.includes('created_at') || res.error.message?.includes('column'))) {
+        return await supabase!.from('portfolio').select('*');
+      }
+      return res;
+    } catch (e) {
+      return await supabase!.from('portfolio').select('*');
+    }
+  }, []);
+
+  return [...data].sort((a: any, b: any) => {
+    if (a.created_at && b.created_at) {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    const aId = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0;
+    const bId = parseInt(String(b.id).replace(/\D/g, ''), 10) || 0;
+    return bId - aId;
+  });
+};
 export const upsertProject = async (project: Partial<Project>) => {
   const localItem = localDB.upsertItem('portfolio', project);
   if (!supabase) return { success: true, cloud: false };
@@ -137,7 +158,28 @@ export const deleteTestimonial = async (id: string) => {
   if (supabase) await supabase.from('testimonials').delete().eq('id', id);
 };
 
-export const getInquiries = () => handleRequest('inquiries', async () => await supabase!.from('inquiries').select('*').order('created_at', { ascending: false }), []);
+export const getInquiries = async () => {
+  const data = await handleRequest('inquiries', async () => {
+    try {
+      const res = await supabase!.from('inquiries').select('*').order('created_at', { ascending: false });
+      if (res.error && (res.error.code === 'PGRST100' || res.error.message?.includes('created_at') || res.error.message?.includes('column'))) {
+        return await supabase!.from('inquiries').select('*');
+      }
+      return res;
+    } catch (e) {
+      return await supabase!.from('inquiries').select('*');
+    }
+  }, []);
+
+  return [...data].sort((a: any, b: any) => {
+    if (a.created_at && b.created_at) {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    const aId = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0;
+    const bId = parseInt(String(b.id).replace(/\D/g, ''), 10) || 0;
+    return bId - aId;
+  });
+};
 export const deleteInquiry = async (id: string) => {
   localDB.removeItem('inquiries', id);
   if (supabase) await supabase.from('inquiries').delete().eq('id', id);
