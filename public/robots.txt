@@ -4,4 +4,3 @@ Disallow: /admin
 Disallow: /adminpanel
 
 Sitemap: https://www.riddhaan.in/sitemap.xml
-Sitemap: https://www.riddhaan.in/sitemap.html
