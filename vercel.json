@@ -3,19 +3,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/admin",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/blog",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/blog/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/((?!api|robots\\.txt|sitemap|favicon\\.png|favicon\\.ico|assets/).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
